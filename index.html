@@ -853,6 +853,72 @@
         .hidden {
             display: none;
         }
+        
+        /* Collage Generator Styles */
+        .collage-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .collage-controls {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        
+        .collage-controls button {
+            padding: 10px 20px;
+            font-size: 0.9em;
+        }
+        
+        .collage-controls select {
+            padding: 10px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 1em;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .collage-container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            max-width: 90vw;
+            max-height: 70vh;
+            overflow: auto;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+        }
+        
+        .collage-canvas-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #collageCanvas {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
 
         @media (max-width: 600px) {
             h1 {
@@ -879,6 +945,16 @@
             
             .modal-content {
                 padding: 30px 20px;
+            }
+            
+            .collage-controls {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .collage-controls button,
+            .collage-controls select {
+                width: 100%;
             }
         }
     </style>
@@ -955,6 +1031,7 @@
             <button onclick="loadRandomPhoto()">🐾 Next Toni</button>
             <button class="secondary" onclick="downloadPhoto()">💾 Download</button>
             <button class="secondary" onclick="window.open('instagram.html', '_blank')" title="View Toni's fake Instagram feed">📱 Tonstergram</button>
+            <button class="secondary" onclick="openCollageGenerator()" title="Generate a collage of random Toni photos">🎨 Make Collage</button>
         </div>
         
         <div class="controls-row">
@@ -988,6 +1065,29 @@
             </div>
             <div class="favorites-grid" id="favoritesGrid">
                 <!-- Favorites will be populated here -->
+            </div>
+        </div>
+        
+        <!-- Collage Generator Modal -->
+        <div id="collageModal" class="collage-modal hidden">
+            <div class="collage-controls">
+                <label>
+                    Layout:
+                    <select id="collageLayout" onchange="generateCollage()">
+                        <option value="2x2">2×2 Grid (4 photos)</option>
+                        <option value="3x3" selected>3×3 Grid (9 photos)</option>
+                        <option value="4x4">4×4 Grid (16 photos)</option>
+                        <option value="mosaic">Random Mosaic</option>
+                    </select>
+                </label>
+                <button onclick="generateCollage()">🔄 Regenerate</button>
+                <button onclick="downloadCollage()">💾 Download</button>
+                <button class="secondary" onclick="closeCollageGenerator()">✖ Close</button>
+            </div>
+            <div class="collage-container">
+                <div class="collage-canvas-wrapper">
+                    <canvas id="collageCanvas"></canvas>
+                </div>
             </div>
         </div>
         
@@ -1537,6 +1637,156 @@
             const link = document.createElement('a');
             link.href = currentPhoto.path;
             link.download = currentPhoto.path.split('/').pop();
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // Collage Generator Functions
+        function openCollageGenerator() {
+            if (catPhotos.length === 0) {
+                alert('No photos available to create a collage!');
+                return;
+            }
+            
+            document.getElementById('collageModal').classList.remove('hidden');
+            generateCollage();
+        }
+        
+        function closeCollageGenerator() {
+            document.getElementById('collageModal').classList.add('hidden');
+        }
+        
+        async function generateCollage() {
+            const layout = document.getElementById('collageLayout').value;
+            const canvas = document.getElementById('collageCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            let gridSize, photoCount;
+            
+            // Determine grid size based on layout
+            if (layout === '2x2') {
+                gridSize = 2;
+                photoCount = 4;
+            } else if (layout === '3x3') {
+                gridSize = 3;
+                photoCount = 9;
+            } else if (layout === '4x4') {
+                gridSize = 4;
+                photoCount = 16;
+            } else if (layout === 'mosaic') {
+                gridSize = 3;
+                photoCount = 9;
+            }
+            
+            // Canvas size
+            const cellSize = 400;
+            const padding = 10;
+            const canvasSize = (cellSize * gridSize) + (padding * (gridSize + 1));
+            
+            canvas.width = canvasSize;
+            canvas.height = canvasSize;
+            
+            // White background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvasSize, canvasSize);
+            
+            // Get random photos
+            const selectedPhotos = getRandomPhotosForCollage(photoCount);
+            
+            // Load and draw images
+            const imagePromises = selectedPhotos.map((photoUrl, index) => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    img.onload = () => {
+                        if (layout === 'mosaic') {
+                            // Random mosaic layout
+                            drawMosaicImage(ctx, img, index, gridSize, cellSize, padding);
+                        } else {
+                            // Regular grid layout
+                            const row = Math.floor(index / gridSize);
+                            const col = index % gridSize;
+                            const x = padding + (col * (cellSize + padding));
+                            const y = padding + (row * (cellSize + padding));
+                            
+                            drawImageCover(ctx, img, x, y, cellSize, cellSize);
+                        }
+                        resolve();
+                    };
+                    img.onerror = () => {
+                        console.error('Failed to load image:', photoUrl);
+                        resolve();
+                    };
+                    img.src = photoUrl;
+                });
+            });
+            
+            await Promise.all(imagePromises);
+            
+            // Add watermark
+            ctx.fillStyle = 'rgba(102, 126, 234, 0.8)';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Toni\'s Gallery 🐱', canvasSize / 2, canvasSize - 20);
+        }
+        
+        function getRandomPhotosForCollage(count) {
+            const shuffled = [...catPhotos].sort(() => Math.random() - 0.5);
+            return shuffled.slice(0, Math.min(count, catPhotos.length)).map(p => p.path);
+        }
+        
+        function drawImageCover(ctx, img, x, y, width, height) {
+            // Calculate scaling to cover the area while maintaining aspect ratio
+            const imgAspect = img.width / img.height;
+            const areaAspect = width / height;
+            
+            let drawWidth, drawHeight, offsetX, offsetY;
+            
+            if (imgAspect > areaAspect) {
+                // Image is wider - fit to height
+                drawHeight = height;
+                drawWidth = img.width * (height / img.height);
+                offsetX = (width - drawWidth) / 2;
+                offsetY = 0;
+            } else {
+                // Image is taller - fit to width
+                drawWidth = width;
+                drawHeight = img.height * (width / img.width);
+                offsetX = 0;
+                offsetY = (height - drawHeight) / 2;
+            }
+            
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(x, y, width, height);
+            ctx.clip();
+            ctx.drawImage(img, x + offsetX, y + offsetY, drawWidth, drawHeight);
+            ctx.restore();
+        }
+        
+        function drawMosaicImage(ctx, img, index, gridSize, cellSize, padding) {
+            // Randomize size and position for mosaic effect
+            const baseRow = Math.floor(index / gridSize);
+            const baseCol = index % gridSize;
+            
+            // Add some randomness to position and size
+            const randomOffset = () => (Math.random() - 0.5) * 50;
+            const randomSize = () => cellSize + (Math.random() - 0.5) * 100;
+            
+            const size = Math.max(200, randomSize());
+            const x = padding + (baseCol * (cellSize + padding)) + randomOffset();
+            const y = padding + (baseRow * (cellSize + padding)) + randomOffset();
+            
+            drawImageCover(ctx, img, x, y, size, size);
+        }
+        
+        function downloadCollage() {
+            const canvas = document.getElementById('collageCanvas');
+            const link = document.createElement('a');
+            const timestamp = new Date().toISOString().split('T')[0];
+            link.download = `toni-collage-${timestamp}.png`;
+            link.href = canvas.toDataURL('image/png');
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
