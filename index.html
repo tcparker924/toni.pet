@@ -886,6 +886,7 @@
             <button class="mood-btn" data-mood="lazy_boy" onclick="selectMood('lazy_boy')">😴 Lazy Boy</button>
             <button class="mood-btn" data-mood="sweet_perfect_angel_cat" onclick="selectMood('sweet_perfect_angel_cat')">😇 Sweet Perfect Angel Cat</button>
             <button class="mood-btn" data-mood="weirdo" onclick="selectMood('weirdo')">🤪 Weirdo</button>
+            <button class="mood-btn" data-mood="someone_help" onclick="selectMood('someone_help')">🆘 Someone Help</button>
         </div>
         
         <div class="photo-container" id="photoContainer">
@@ -954,6 +955,27 @@
             
             <div id="batchPreview" class="batch-preview"></div>
             
+            <div id="batchTagSection" class="hidden" style="margin: 30px auto; max-width: 600px; padding: 25px; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);">
+                <h3 style="text-align: center; color: #667eea; margin-bottom: 20px;">🏷️ Batch Tag All Photos</h3>
+                <p style="text-align: center; color: #666; margin-bottom: 15px; font-size: 0.9em;">
+                    Select mood(s) to apply to ALL photos in the batch at once:
+                </p>
+                <div class="mood-tags" id="batchAllMoodTags" style="margin-bottom: 20px;">
+                    <div class="mood-tag" data-mood="unbridled_rage" onclick="toggleBatchAllMood('unbridled_rage')">😤 Unbridled Rage</div>
+                    <div class="mood-tag" data-mood="lazy_boy" onclick="toggleBatchAllMood('lazy_boy')">😴 Lazy Boy</div>
+                    <div class="mood-tag" data-mood="sweet_perfect_angel_cat" onclick="toggleBatchAllMood('sweet_perfect_angel_cat')">😇 Sweet Perfect Angel Cat</div>
+                    <div class="mood-tag" data-mood="weirdo" onclick="toggleBatchAllMood('weirdo')">🤪 Weirdo</div>
+                    <div class="mood-tag" data-mood="someone_help" onclick="toggleBatchAllMood('someone_help')">🆘 Someone Help</div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="success" style="flex: 1;" onclick="applyBatchTagsToAll()">✅ Apply to All Photos</button>
+                    <button class="secondary" style="flex: 1;" onclick="clearAllBatchTags()">🗑️ Clear All Tags</button>
+                </div>
+                <p style="text-align: center; color: #999; margin-top: 15px; font-size: 0.85em;">
+                    💡 You can still edit individual photo tags by clicking "🏷️ Tag" on each photo
+                </p>
+            </div>
+            
             <div class="upload-preview" id="uploadPreview">
                 <img id="previewImage" class="preview-image" alt="Preview" />
                 
@@ -965,6 +987,7 @@
                     <div class="mood-tag" data-mood="lazy_boy" onclick="toggleMoodTag('lazy_boy')">😴 Lazy Boy</div>
                     <div class="mood-tag" data-mood="sweet_perfect_angel_cat" onclick="toggleMoodTag('sweet_perfect_angel_cat')">😇 Sweet Perfect Angel Cat</div>
                     <div class="mood-tag" data-mood="weirdo" onclick="toggleMoodTag('weirdo')">🤪 Weirdo</div>
+                    <div class="mood-tag" data-mood="someone_help" onclick="toggleMoodTag('someone_help')">🆘 Someone Help</div>
                 </div>
                 
                 <div class="upload-buttons">
@@ -995,7 +1018,9 @@
         // REPLACE WITH YOUR CLOUDINARY CREDENTIALS
         const cloudinaryConfig = {
             cloudName: 'dhjs7c8ix',
-            uploadPreset: 'toni_gallery_upload'
+            uploadPreset: 'toni_gallery_upload',
+            folder: 'toni-gallery',
+            uploadUrl: 'https://api.cloudinary.com/v1_1/dhjs7c8ix/image/upload'
         };
 
         const firebaseConfig = {
@@ -1051,6 +1076,7 @@
         let selectedFile = null;
         let selectedMoods = [];
         let batchFiles = []; // For batch upload
+        let batchAllMoods = []; // For batch tagging all photos
         
         // Purr functionality state
         let purrProgress = 0;
@@ -1823,6 +1849,7 @@
                         <div class="mood-tag ${photo.moods && photo.moods.includes('lazy_boy') ? 'selected' : ''}" data-mood="lazy_boy">😴 Lazy Boy</div>
                         <div class="mood-tag ${photo.moods && photo.moods.includes('sweet_perfect_angel_cat') ? 'selected' : ''}" data-mood="sweet_perfect_angel_cat">😇 Sweet Perfect Angel Cat</div>
                         <div class="mood-tag ${photo.moods && photo.moods.includes('weirdo') ? 'selected' : ''}" data-mood="weirdo">🤪 Weirdo</div>
+                        <div class="mood-tag ${photo.moods && photo.moods.includes('someone_help') ? 'selected' : ''}" data-mood="someone_help">🆘 Someone Help</div>
                     </div>
                     <div style="display: flex; gap: 10px; margin-top: 20px;">
                         <button class="success" style="flex: 1;" onclick="saveEditedTags('${photoUrl}')">💾 Save Changes</button>
@@ -1974,11 +2001,18 @@
         
         function renderBatchPreview() {
             const batchPreview = document.getElementById('batchPreview');
+            const batchTagSection = document.getElementById('batchTagSection');
             
             if (batchFiles.length === 0) {
                 batchPreview.innerHTML = '';
+                if (batchTagSection) batchTagSection.classList.add('hidden');
+                const uploadAllBtn = document.getElementById('uploadAllBtn');
+                if (uploadAllBtn) uploadAllBtn.remove();
                 return;
             }
+            
+            // Show batch tag section
+            if (batchTagSection) batchTagSection.classList.remove('hidden');
             
             batchPreview.innerHTML = batchFiles.map(item => `
                 <div class="batch-item" data-id="${item.id}">
@@ -2021,7 +2055,8 @@
                 'unbridled_rage': '😤',
                 'lazy_boy': '😴',
                 'sweet_perfect_angel_cat': '😇',
-                'weirdo': '🤪'
+                'weirdo': '🤪',
+                'someone_help': '🆘'
             };
             return moodMap[mood] || '🐱';
         }
@@ -2029,6 +2064,75 @@
         function removeBatchItem(id) {
             batchFiles = batchFiles.filter(item => item.id !== parseFloat(id));
             renderBatchPreview();
+        }
+        
+        function toggleBatchAllMood(mood) {
+            const tag = document.querySelector(`#batchAllMoodTags .mood-tag[data-mood="${mood}"]`);
+            if (!tag) return;
+            
+            if (batchAllMoods.includes(mood)) {
+                batchAllMoods = batchAllMoods.filter(m => m !== mood);
+                tag.classList.remove('selected');
+            } else {
+                batchAllMoods.push(mood);
+                tag.classList.add('selected');
+            }
+            
+            console.log('Batch all moods:', batchAllMoods);
+        }
+        
+        function applyBatchTagsToAll() {
+            if (batchAllMoods.length === 0) {
+                alert('Please select at least one mood tag to apply to all photos');
+                return;
+            }
+            
+            if (batchFiles.length === 0) {
+                alert('No photos in batch to tag');
+                return;
+            }
+            
+            // Apply selected moods to all batch files
+            batchFiles.forEach(item => {
+                // Add moods that aren't already present
+                batchAllMoods.forEach(mood => {
+                    if (!item.moods.includes(mood)) {
+                        item.moods.push(mood);
+                    }
+                });
+            });
+            
+            // Clear batch all moods selection
+            batchAllMoods = [];
+            document.querySelectorAll('#batchAllMoodTags .mood-tag').forEach(tag => {
+                tag.classList.remove('selected');
+            });
+            
+            // Re-render the preview to show updated tags
+            renderBatchPreview();
+            
+            alert(`✅ Tags applied to all ${batchFiles.length} photos!`);
+        }
+        
+        function clearAllBatchTags() {
+            if (batchFiles.length === 0) {
+                alert('No photos in batch');
+                return;
+            }
+            
+            if (!confirm(`Clear all tags from all ${batchFiles.length} photos?`)) {
+                return;
+            }
+            
+            // Clear moods from all batch files
+            batchFiles.forEach(item => {
+                item.moods = [];
+            });
+            
+            // Re-render the preview
+            renderBatchPreview();
+            
+            alert('✅ All tags cleared!');
         }
         
         function selectMoodsForBatchItem(id) {
@@ -2047,6 +2151,7 @@
                         <div class="mood-tag ${item.moods.includes('lazy_boy') ? 'selected' : ''}" data-mood="lazy_boy">😴 Lazy Boy</div>
                         <div class="mood-tag ${item.moods.includes('sweet_perfect_angel_cat') ? 'selected' : ''}" data-mood="sweet_perfect_angel_cat">😇 Sweet Perfect Angel Cat</div>
                         <div class="mood-tag ${item.moods.includes('weirdo') ? 'selected' : ''}" data-mood="weirdo">🤪 Weirdo</div>
+                        <div class="mood-tag ${item.moods.includes('someone_help') ? 'selected' : ''}" data-mood="someone_help">🆘 Someone Help</div>
                     </div>
                     <div style="display: flex; gap: 10px; margin-top: 20px;">
                         <button class="success" style="flex: 1;" onclick="saveBatchItemMoods('${id}')">💾 Save</button>
