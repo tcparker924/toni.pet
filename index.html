@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toni's Photo Gallery 💕</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+        }
+        
+        /* Mosaic background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                url('cats/cat1.jpg'),
+                url('cats/cat2.jpg'),
+                url('cats/cat3.jpg'),
+                url('cats/cat4.jpg'),
+                url('cats/cat5.jpg');
+            background-size: 150px 150px, 200px 200px, 180px 180px, 170px 170px, 190px 190px;
+            background-position: 
+                10% 20%,
+                80% 30%,
+                20% 70%,
+                90% 80%,
+                50% 90%;
+            background-repeat: no-repeat;
+            opacity: 0.08;
+            z-index: 0;
+            pointer-events: none;
+            filter: blur(1px);
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        .visit-counter {
+            text-align: center;
+            color: #667eea;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .mood-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .mood-btn {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .mood-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .mood-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .photo-container {
+            position: relative;
+            width: 100%;
+            max-height: 600px;
+            overflow: hidden;
+            border-radius: 10px;
+            background: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        #catPhoto {
+            max-width: 100%;
+            max-height: 600px;
+            width: auto;
+            height: auto;
+            display: block;
+            border-radius: 10px;
+            transition: transform 0.3s ease;
+        }
+        
+        .photo-container:hover #catPhoto {
+            transform: scale(1.02);
+        }
+        
+        /* Purr indicator */
+        .purr-indicator {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            color: #667eea;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .purr-indicator.show {
+            opacity: 1;
+        }
+        
+        .purr-indicator.active {
+            background: #667eea;
+            color: white;
+            animation: purrPulse 0.5s ease infinite;
+        }
+        
+        @keyframes purrPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .rating-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .rating-label {
+            font-size: 0.9em;
+            color: #666;
+            font-weight: 600;
+        }
+        
+        .heart {
+            font-size: 2em;
+            cursor: pointer;
+            transition: transform 0.2s, filter 0.2s;
+            user-select: none;
+        }
+        
+        .heart:hover {
+            transform: scale(1.2);
+            filter: brightness(1.2);
+        }
+        
+        .heart.filled {
+            color: #ff6b6b;
+        }
+        
+        .heart.empty {
+            color: #ddd;
+        }
+        
+        .button-container {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button.secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        button.success {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .controls-row {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #667eea;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+        
+        .slideshow-status {
+            text-align: center;
+            color: #667eea;
+            font-size: 0.9em;
+            margin-top: 10px;
+            font-weight: 600;
+            min-height: 20px;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Username Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+        
+        .modal-content h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+        
+        .modal-content p {
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        
+        .username-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+        }
+        
+        .username-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .modal-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1em;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        
+        .modal-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .modal-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .user-info {
+            text-align: center;
+            color: #764ba2;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .user-info .change-user {
+            color: #667eea;
+            text-decoration: underline;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        .error-message {
+            color: #f5576c;
+            font-size: 0.9em;
+            margin-top: 10px;
+            min-height: 20px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.5em;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+            
+            button {
+                font-size: 0.9em;
+                padding: 12px 20px;
+            }
+            
+            .mood-btn {
+                font-size: 0.8em;
+                padding: 6px 12px;
+            }
+            
+            .heart {
+                font-size: 1.5em;
+            }
+            
+            .modal-content {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Username Modal -->
+    <div id="usernameModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2>Welcome! 💕</h2>
+            <p>Enter a username to save your ratings and access them from any device!</p>
+            <input 
+                type="text" 
+                id="usernameInput" 
+                class="username-input" 
+                placeholder="Enter username..."
+                maxlength="20"
+            />
+            <div class="error-message" id="errorMessage"></div>
+            <button class="modal-button" onclick="saveUsername()">Get Started</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="user-info" id="userInfo"></div>
+        <h1>🐱 Toni's Photo Gallery 🐱</h1>
+        <div class="visit-counter" id="visitCounter">Loading...</div>
+        
+        <div class="mood-selector">
+            <button class="mood-btn active" data-mood="all" onclick="selectMood('all')">✨ All Moods</button>
+            <button class="mood-btn" data-mood="happy" onclick="selectMood('happy')">😊 Happy</button>
+            <button class="mood-btn" data-mood="silly" onclick="selectMood('silly')">🤪 Silly</button>
+            <button class="mood-btn" data-mood="sleepy" onclick="selectMood('sleepy')">😴 Sleepy</button>
+            <button class="mood-btn" data-mood="majestic" onclick="selectMood('majestic')">👑 Majestic</button>
+        </div>
+        
+        <div class="photo-container" id="photoContainer">
+            <img id="catPhoto" alt="A cute cat" />
+            <div class="purr-indicator" id="purrIndicator">Keep petting... 🐱</div>
+        </div>
+        
+        <div class="rating-container">
+            <span class="rating-label">Rate this photo:</span>
+            <span class="heart empty" data-rating="1" onclick="ratePhoto(1)">♥</span>
+            <span class="heart empty" data-rating="2" onclick="ratePhoto(2)">♥</span>
+            <span class="heart empty" data-rating="3" onclick="ratePhoto(3)">♥</span>
+            <span class="heart empty" data-rating="4" onclick="ratePhoto(4)">♥</span>
+            <span class="heart empty" data-rating="5" onclick="ratePhoto(5)">♥</span>
+        </div>
+        
+        <div class="button-container">
+            <button onclick="loadRandomPhoto()">🐾 Show Another Cat!</button>
+            <button class="secondary" onclick="downloadPhoto()">💾 Download</button>
+        </div>
+        
+        <div class="controls-row">
+            <div class="control-item">
+                <span>🔊 Sound:</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="soundToggle" checked onchange="toggleSound()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="control-item">
+                <span>🎬 Slideshow:</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="slideshowToggle" onchange="toggleSlideshow()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="slideshow-status" id="slideshowStatus"></div>
+    </div>
+
+    <!-- Audio element for meow sound -->
+    <audio id="meowSound" preload="auto">
+        <!-- Using a data URI for a simple beep sound since we can't guarantee external audio files -->
+        <!-- You can replace this with an actual meow.mp3 file if you have one -->
+    </audio>
+
+    <script>
+        // Firebase Configuration
+        // REPLACE THESE WITH YOUR FIREBASE CONFIG (instructions in README)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        let db = null;
+        let firebaseEnabled = false;
+        
+        try {
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                firebaseEnabled = true;
+                console.log("Firebase initialized successfully!");
+            } else {
+                console.log("Firebase not configured - using localStorage only");
+            }
+        } catch (error) {
+            console.log("Firebase initialization failed - using localStorage only", error);
+        }
+
+        // Photo configuration with moods
+        // Format: { path: 'cats/cat1.jpg', moods: ['happy', 'silly'] }
+        const catPhotos = [
+            { path: 'cats/cat1.jpg', moods: ['happy'] },
+            { path: 'cats/cat2.jpg', moods: ['silly'] },
+            { path: 'cats/cat3.jpg', moods: ['sleepy'] },
+            { path: 'cats/cat4.jpg', moods: ['majestic'] },
+            { path: 'cats/cat5.jpg', moods: ['happy', 'silly'] },
+            // Add more photos here with their mood tags
+            // Example: { path: 'cats/cat6.jpg', moods: ['sleepy', 'majestic'] }
+        ];
+
+        // State management
+        let currentPhoto = null;
+        let currentMood = 'all';
+        let soundEnabled = true;
+        let slideshowInterval = null;
+        let visitCount = 0;
+        let currentUser = null;
+        
+        // Purr functionality state
+        let purrProgress = 0;
+        let purrThreshold = 1.5; // seconds of rubbing needed
+        let isPurring = false;
+        let lastMouseMove = 0;
+        let purrAudio = null;
+        
+        // Initialize on page load
+        window.addEventListener('load', async function() {
+            await checkUsername();
+            initializeVisitCounter();
+            loadRandomPhoto();
+            initializeMeowSound();
+            initializePurrFeature();
+        });
+        
+        // Username Management
+        async function checkUsername() {
+            const savedUsername = localStorage.getItem('toniUsername');
+            
+            if (savedUsername) {
+                currentUser = savedUsername;
+                updateUserInfo();
+                if (firebaseEnabled) {
+                    await loadRatingsFromFirebase();
+                }
+            } else {
+                showUsernameModal();
+            }
+        }
+        
+        function showUsernameModal() {
+            document.getElementById('usernameModal').classList.remove('hidden');
+            document.getElementById('usernameInput').focus();
+        }
+        
+        function hideUsernameModal() {
+            document.getElementById('usernameModal').classList.add('hidden');
+        }
+        
+        async function saveUsername() {
+            const input = document.getElementById('usernameInput');
+            const username = input.value.trim();
+            const errorMsg = document.getElementById('errorMessage');
+            
+            if (!username) {
+                errorMsg.textContent = 'Please enter a username';
+                return;
+            }
+            
+            if (username.length < 2) {
+                errorMsg.textContent = 'Username must be at least 2 characters';
+                return;
+            }
+            
+            // Sanitize username (alphanumeric, spaces, hyphens, underscores only)
+            const sanitized = username.replace(/[^a-zA-Z0-9\s_-]/g, '');
+            if (sanitized !== username) {
+                errorMsg.textContent = 'Username can only contain letters, numbers, spaces, - and _';
+                return;
+            }
+            
+            currentUser = username;
+            localStorage.setItem('toniUsername', username);
+            
+            // Load ratings from Firebase if available
+            if (firebaseEnabled) {
+                await loadRatingsFromFirebase();
+            }
+            
+            updateUserInfo();
+            hideUsernameModal();
+            
+            // Reload current photo to show correct rating
+            if (currentPhoto) {
+                const savedRating = getRating(currentPhoto.path);
+                updateRatingDisplay(savedRating);
+            }
+        }
+        
+        function updateUserInfo() {
+            const userInfoElement = document.getElementById('userInfo');
+            if (currentUser) {
+                userInfoElement.innerHTML = `Logged in as: <strong>${currentUser}</strong> <span class="change-user" onclick="changeUser()">Change User</span>`;
+            } else {
+                userInfoElement.textContent = '';
+            }
+        }
+        
+        function changeUser() {
+            if (confirm('Switch users? Your current ratings will be saved.')) {
+                localStorage.removeItem('toniUsername');
+                currentUser = null;
+                showUsernameModal();
+            }
+        }
+        
+        // Allow Enter key in username input
+        document.addEventListener('DOMContentLoaded', function() {
+            const input = document.getElementById('usernameInput');
+            if (input) {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        saveUsername();
+                    }
+                });
+            }
+        });
+        
+        // Visit counter (per user)
+        function initializeVisitCounter() {
+            if (!currentUser) {
+                visitCount = 0;
+                return;
+            }
+            
+            const key = `toniVisitCount_${currentUser}`;
+            visitCount = parseInt(localStorage.getItem(key) || '0');
+            visitCount++;
+            localStorage.setItem(key, visitCount.toString());
+            updateVisitCounter();
+        }
+        
+        function updateVisitCounter() {
+            const counter = document.getElementById('visitCounter');
+            if (currentUser) {
+                const times = visitCount === 1 ? 'time' : 'times';
+                counter.textContent = `You've smiled at Toni ${visitCount} ${times}! 💕`;
+            } else {
+                counter.textContent = '';
+            }
+        }
+        
+        // Mood selector
+        function selectMood(mood) {
+            currentMood = mood;
+            
+            // Update button states
+            document.querySelectorAll('.mood-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-mood="${mood}"]`).classList.add('active');
+            
+            loadRandomPhoto();
+        }
+        
+        // Get photos filtered by mood
+        function getFilteredPhotos() {
+            if (currentMood === 'all') {
+                return catPhotos;
+            }
+            return catPhotos.filter(photo => photo.moods.includes(currentMood));
+        }
+        
+        // Load random photo
+        function loadRandomPhoto() {
+            const filteredPhotos = getFilteredPhotos();
+            
+            if (filteredPhotos.length === 0) {
+                document.getElementById('catPhoto').alt = 'No photos available for this mood!';
+                currentPhoto = null;
+                updateRatingDisplay(0);
+                return;
+            }
+            
+            const randomIndex = Math.floor(Math.random() * filteredPhotos.length);
+            currentPhoto = filteredPhotos[randomIndex];
+            
+            const imgElement = document.getElementById('catPhoto');
+            imgElement.src = currentPhoto.path;
+            imgElement.alt = 'A cute cat photo';
+            
+            // Play sound
+            if (soundEnabled) {
+                playMeow();
+            }
+            
+            // Load saved rating
+            const savedRating = getRating(currentPhoto.path);
+            updateRatingDisplay(savedRating);
+        }
+        
+        // Rating system with Firebase sync
+        async function ratePhoto(rating) {
+            if (!currentPhoto || !currentUser) return;
+            
+            // Save to Firebase if enabled
+            if (firebaseEnabled) {
+                try {
+                    await db.collection('ratings').doc(currentUser).set({
+                        [currentPhoto.path]: rating
+                    }, { merge: true });
+                } catch (error) {
+                    console.log('Firebase save failed, using localStorage', error);
+                }
+            }
+            
+            // Always save to localStorage as backup
+            const ratings = JSON.parse(localStorage.getItem(`toniRatings_${currentUser}`) || '{}');
+            ratings[currentPhoto.path] = rating;
+            localStorage.setItem(`toniRatings_${currentUser}`, JSON.stringify(ratings));
+            
+            updateRatingDisplay(rating);
+            
+            // Play sound
+            if (soundEnabled) {
+                playMeow();
+            }
+        }
+        
+        function getRating(photoPath) {
+            if (!currentUser) return 0;
+            
+            const ratings = JSON.parse(localStorage.getItem(`toniRatings_${currentUser}`) || '{}');
+            return ratings[photoPath] || 0;
+        }
+        
+        async function loadRatingsFromFirebase() {
+            if (!firebaseEnabled || !currentUser) return;
+            
+            try {
+                const doc = await db.collection('ratings').doc(currentUser).get();
+                
+                if (doc.exists) {
+                    const firebaseRatings = doc.data();
+                    // Merge with localStorage
+                    const localRatings = JSON.parse(localStorage.getItem(`toniRatings_${currentUser}`) || '{}');
+                    const mergedRatings = { ...firebaseRatings, ...localRatings };
+                    
+                    // Save merged ratings
+                    localStorage.setItem(`toniRatings_${currentUser}`, JSON.stringify(mergedRatings));
+                    
+                    // Update Firebase with any local ratings
+                    await db.collection('ratings').doc(currentUser).set(mergedRatings);
+                    
+                    console.log('Ratings synced from Firebase!');
+                }
+            } catch (error) {
+                console.log('Failed to load ratings from Firebase', error);
+            }
+        }
+        
+        function updateRatingDisplay(rating) {
+            const hearts = document.querySelectorAll('.heart');
+            hearts.forEach((heart, index) => {
+                if (index < rating) {
+                    heart.classList.remove('empty');
+                    heart.classList.add('filled');
+                } else {
+                    heart.classList.remove('filled');
+                    heart.classList.add('empty');
+                }
+            });
+        }
+        
+        // Download photo
+        function downloadPhoto() {
+            if (!currentPhoto) return;
+            
+            const link = document.createElement('a');
+            link.href = currentPhoto.path;
+            link.download = currentPhoto.path.split('/').pop();
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            if (soundEnabled) {
+                playMeow();
+            }
+        }
+        
+        // Sound control
+        function initializeMeowSound() {
+            // Create a simple beep sound using Web Audio API
+            // You can replace this with an actual meow.mp3 file
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            window.playMeowSound = function() {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.2);
+            };
+            
+            // Initialize purr sound generator
+            window.playPurrSound = function() {
+                // Create a low rumbling purr sound
+                const oscillator1 = audioContext.createOscillator();
+                const oscillator2 = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator1.connect(gainNode);
+                oscillator2.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // Two frequencies for richer purr sound
+                oscillator1.frequency.value = 25; // Low rumble
+                oscillator2.frequency.value = 50; // Harmonic
+                oscillator1.type = 'triangle';
+                oscillator2.type = 'sine';
+                
+                // Volume envelope
+                gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.15, audioContext.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0.15, audioContext.currentTime + 2.9);
+                gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 3);
+                
+                oscillator1.start(audioContext.currentTime);
+                oscillator2.start(audioContext.currentTime);
+                oscillator1.stop(audioContext.currentTime + 3);
+                oscillator2.stop(audioContext.currentTime + 3);
+            };
+        }
+        
+        function playMeow() {
+            try {
+                if (window.playMeowSound) {
+                    window.playMeowSound();
+                }
+            } catch (e) {
+                console.log('Sound play failed:', e);
+            }
+        }
+        
+        function playPurr() {
+            try {
+                if (window.playPurrSound && soundEnabled) {
+                    window.playPurrSound();
+                }
+            } catch (e) {
+                console.log('Purr play failed:', e);
+            }
+        }
+        
+        function toggleSound() {
+            soundEnabled = document.getElementById('soundToggle').checked;
+        }
+        
+        // Purr Feature - Pet the cat!
+        function initializePurrFeature() {
+            const photoContainer = document.getElementById('photoContainer');
+            const purrIndicator = document.getElementById('purrIndicator');
+            let isMouseOver = false;
+            
+            // Mouse enter - show indicator
+            photoContainer.addEventListener('mouseenter', function() {
+                isMouseOver = true;
+                purrIndicator.classList.add('show');
+            });
+            
+            // Mouse leave - hide indicator and reset
+            photoContainer.addEventListener('mouseleave', function() {
+                isMouseOver = false;
+                purrProgress = 0;
+                isPurring = false;
+                purrIndicator.classList.remove('show', 'active');
+                purrIndicator.textContent = 'Keep petting... 🐱';
+            });
+            
+            // Track mouse movement (petting)
+            photoContainer.addEventListener('mousemove', function(e) {
+                if (!isMouseOver || isPurring) return;
+                
+                const now = Date.now();
+                const timeSinceLastMove = (now - lastMouseMove) / 1000;
+                
+                // Only count movement if it's continuous (within 100ms)
+                if (timeSinceLastMove < 0.1) {
+                    purrProgress += 0.016; // Approximately 60fps
+                    
+                    // Update indicator based on progress
+                    const progressPercent = (purrProgress / purrThreshold) * 100;
+                    
+                    if (progressPercent > 80) {
+                        purrIndicator.textContent = 'Almost there! 😻';
+                    } else if (progressPercent > 50) {
+                        purrIndicator.textContent = 'Keep going... 🐱';
+                    }
+                    
+                    // Trigger purr when threshold reached
+                    if (purrProgress >= purrThreshold && !isPurring) {
+                        triggerPurr();
+                    }
+                } else {
+                    // Reset if movement stops
+                    purrProgress = Math.max(0, purrProgress - 0.05);
+                }
+                
+                lastMouseMove = now;
+            });
+            
+            // Also trigger on long press for mobile
+            let touchStartTime = 0;
+            photoContainer.addEventListener('touchstart', function(e) {
+                touchStartTime = Date.now();
+                purrIndicator.classList.add('show');
+                purrIndicator.textContent = 'Keep holding... 🐱';
+            });
+            
+            photoContainer.addEventListener('touchend', function(e) {
+                const touchDuration = (Date.now() - touchStartTime) / 1000;
+                
+                if (touchDuration >= 2 && !isPurring) {
+                    triggerPurr();
+                } else {
+                    purrIndicator.classList.remove('show');
+                }
+            });
+        }
+        
+        function triggerPurr() {
+            isPurring = true;
+            const purrIndicator = document.getElementById('purrIndicator');
+            
+            purrIndicator.textContent = 'Purrrr... 😻💕';
+            purrIndicator.classList.add('active');
+            
+            // Play purr sound
+            playPurr();
+            
+            // Reset after 3 seconds
+            setTimeout(() => {
+                isPurring = false;
+                purrProgress = 0;
+                purrIndicator.classList.remove('active', 'show');
+                purrIndicator.textContent = 'Keep petting... 🐱';
+            }, 3000);
+        }
+        
+        // Slideshow control
+        function toggleSlideshow() {
+            const isEnabled = document.getElementById('slideshowToggle').checked;
+            const statusElement = document.getElementById('slideshowStatus');
+            
+            if (isEnabled) {
+                startSlideshow();
+                statusElement.textContent = '▶️ Slideshow active (5s intervals)';
+            } else {
+                stopSlideshow();
+                statusElement.textContent = '';
+            }
+        }
+        
+        function startSlideshow() {
+            stopSlideshow(); // Clear any existing interval
+            slideshowInterval = setInterval(() => {
+                loadRandomPhoto();
+            }, 5000); // 5 seconds
+        }
+        
+        function stopSlideshow() {
+            if (slideshowInterval) {
+                clearInterval(slideshowInterval);
+                slideshowInterval = null;
+            }
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === ' ' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                loadRandomPhoto();
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                downloadPhoto();
+            } else if (e.key >= '1' && e.key <= '5') {
+                ratePhoto(parseInt(e.key));
+            }
+        });
+    </script>
+</body>
+</html>
