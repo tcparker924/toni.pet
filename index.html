@@ -1854,7 +1854,7 @@
         
         function editPhotoTags(photoUrl) {
             // Find the photo in catPhotos array
-            const photo = catPhotos.find(p => p.url === photoUrl);
+            const photo = catPhotos.find(p => p.path === photoUrl);
             if (!photo) {
                 alert('Photo not found');
                 return;
@@ -1894,7 +1894,7 @@
         }
         
         async function saveEditedTags(photoUrl) {
-            const photo = catPhotos.find(p => p.url === photoUrl);
+            const photo = catPhotos.find(p => p.path === photoUrl);
             if (!photo) return;
             
             // Get selected moods
@@ -1909,7 +1909,7 @@
                 try {
                     // Find the document with this URL
                     const photosRef = db.collection('users').doc(currentUser).collection('photos');
-                    const querySnapshot = await photosRef.where('url', '==', photoUrl).get();
+                    const querySnapshot = await photosRef.where('path', '==', photoUrl).get();
                     
                     if (!querySnapshot.empty) {
                         const doc = querySnapshot.docs[0];
@@ -2297,7 +2297,7 @@
             if (db && currentUser) {
                 try {
                     await db.collection('users').doc(currentUser).collection('photos').add({
-                        url: photoUrl,
+                        path: photoUrl,
                         moods: moods,
                         uploadedAt: new Date(),
                         hash: hash
@@ -2309,8 +2309,20 @@
             }
             
             // Add to local array
-            catPhotos.push({ url: photoUrl, moods: moods });
+            catPhotos.push({ path: photoUrl, moods: moods });
             console.log('Added to catPhotos array');
+            
+            // Save to localStorage so it persists across page reloads
+            const savedPhotos = JSON.parse(localStorage.getItem('uploadedPhotos') || '[]');
+            savedPhotos.push({
+                path: photoUrl,
+                moods: moods,
+                hash: hash,
+                uploadedBy: currentUser,
+                uploadedAt: new Date().toISOString()
+            });
+            localStorage.setItem('uploadedPhotos', JSON.stringify(savedPhotos));
+            console.log('Saved to localStorage');
             
             return photoUrl;
         }
