@@ -856,13 +856,24 @@
         <div class="modal-content">
             <h2>Welcome! 💕</h2>
             <p>Enter the secret code and your username to access Toni's gallery!</p>
-            <input 
-                type="password" 
-                id="secretCodeInput" 
-                class="username-input" 
-                placeholder="Secret code..."
-                maxlength="50"
-            />
+            <div style="position: relative;">
+                <input 
+                    type="password" 
+                    id="secretCodeInput" 
+                    class="username-input" 
+                    placeholder="Secret code..."
+                    maxlength="50"
+                    style="padding-right: 45px;"
+                />
+                <button 
+                    id="toggleSecretCode" 
+                    onclick="toggleSecretCodeVisibility()"
+                    style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 5px 10px;"
+                    title="Show/hide secret code"
+                >
+                    👁️
+                </button>
+            </div>
             <input 
                 type="text" 
                 id="usernameInput" 
@@ -1120,6 +1131,21 @@
             document.getElementById('secretCodeInput').focus();
         }
         
+        function toggleSecretCodeVisibility() {
+            const secretCodeInput = document.getElementById('secretCodeInput');
+            const toggleBtn = document.getElementById('toggleSecretCode');
+            
+            if (secretCodeInput.type === 'password') {
+                secretCodeInput.type = 'text';
+                toggleBtn.textContent = '🙈'; // Hide icon
+                toggleBtn.title = 'Hide secret code';
+            } else {
+                secretCodeInput.type = 'password';
+                toggleBtn.textContent = '👁️'; // Show icon
+                toggleBtn.title = 'Show secret code';
+            }
+        }
+        
         function hideUsernameModal() {
             document.getElementById('usernameModal').classList.add('hidden');
         }
@@ -1138,7 +1164,7 @@
                 return;
             }
             
-            if (secretCode !== 'toni_balogna') {
+            if (secretCode !== 'toni_bologna') {
                 errorMsg.textContent = '❌ Incorrect secret code. Try again!';
                 secretCodeInput.value = '';
                 secretCodeInput.focus();
@@ -1879,10 +1905,10 @@
             photo.moods = newMoods;
             
             // Update Firestore if connected
-            if (db && currentUsername) {
+            if (db && currentUser) {
                 try {
                     // Find the document with this URL
-                    const photosRef = db.collection('users').doc(currentUsername).collection('photos');
+                    const photosRef = db.collection('users').doc(currentUser).collection('photos');
                     const querySnapshot = await photosRef.where('url', '==', photoUrl).get();
                     
                     if (!querySnapshot.empty) {
@@ -2196,6 +2222,7 @@
             
             let successCount = 0;
             let failCount = 0;
+            const errors = [];
             
             for (let i = 0; i < batchFiles.length; i++) {
                 const item = batchFiles[i];
@@ -2208,7 +2235,8 @@
                     await uploadSinglePhoto(item.file, item.moods);
                     successCount++;
                 } catch (error) {
-                    console.error('Upload failed:', error);
+                    console.error('Upload failed for', item.file.name, ':', error);
+                    errors.push(`${item.file.name}: ${error.message}`);
                     failCount++;
                 }
             }
@@ -2216,14 +2244,29 @@
             batchFiles = [];
             renderBatchPreview();
             
-            alert(`✅ Upload complete!\n\n${successCount} photos uploaded successfully${failCount > 0 ? `\n${failCount} photos failed` : ''}`);
+            let message = `Upload complete!\n\n${successCount} photos uploaded successfully`;
+            if (failCount > 0) {
+                message += `\n${failCount} photos failed`;
+                if (errors.length > 0) {
+                    message += '\n\nErrors:\n' + errors.slice(0, 3).join('\n');
+                    if (errors.length > 3) {
+                        message += `\n...and ${errors.length - 3} more. Check console for details.`;
+                    }
+                }
+            }
+            alert(message);
             
             // Reload the gallery
-            await loadUploadedPhotos();
-            loadRandomPhoto();
+            if (successCount > 0) {
+                await loadUploadedPhotos();
+                loadRandomPhoto();
+            }
         }
         
         async function uploadSinglePhoto(file, moods) {
+            console.log('Uploading photo:', file.name, 'with moods:', moods);
+            console.log('Cloudinary config:', cloudinaryConfig);
+            
             const formData = new FormData();
             formData.append('file', file);
             formData.append('upload_preset', cloudinaryConfig.uploadPreset);
@@ -2234,11 +2277,16 @@
                 body: formData
             });
             
+            console.log('Upload response status:', response.status);
+            
             if (!response.ok) {
-                throw new Error('Upload failed');
+                const errorText = await response.text();
+                console.error('Upload failed. Status:', response.status, 'Response:', errorText);
+                throw new Error(`Upload failed: ${response.status} - ${errorText}`);
             }
             
             const data = await response.json();
+            console.log('Upload successful. URL:', data.secure_url);
             const photoUrl = data.secure_url;
             
             // Generate and save hash
@@ -2246,14 +2294,15 @@
             savePhotoHash(hash);
             
             // Save to Firestore if connected
-            if (db && currentUsername) {
+            if (db && currentUser) {
                 try {
-                    await db.collection('users').doc(currentUsername).collection('photos').add({
+                    await db.collection('users').doc(currentUser).collection('photos').add({
                         url: photoUrl,
                         moods: moods,
                         uploadedAt: new Date(),
                         hash: hash
                     });
+                    console.log('Saved to Firestore');
                 } catch (error) {
                     console.error('Error saving to Firestore:', error);
                 }
@@ -2261,6 +2310,7 @@
             
             // Add to local array
             catPhotos.push({ url: photoUrl, moods: moods });
+            console.log('Added to catPhotos array');
             
             return photoUrl;
         }
