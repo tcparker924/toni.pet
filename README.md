@@ -4,18 +4,23 @@ An interactive website that displays random cat photos with fun features like ra
 
 ## ✨ Features
 
-- 👤 **Username System** - Simple username login (no password needed!)
+- 👤 **Username System** - Simple username + secret code protection
 - ☁️ **Cloud Sync** - Ratings sync across all devices (optional Firebase setup)
+- 📦 **Batch Upload** - Upload multiple photos at once! (NEW!)
+- ✏️ **Edit Tags** - Change mood tags on already uploaded photos! (NEW!)
 - 🎲 **Random Photos** - Get a new cat photo with each refresh or button click
 - 💕 **Photo Rating** - Rate each photo with 1-5 hearts (saves per username!)
-- 🎭 **Mood Selection** - Filter photos by mood: Happy, Silly, Sleepy, or Majestic
+- ⭐ **Favorites Gallery** - View and download all your rated photos
+- 🎭 **Mood Selection** - Filter photos by custom moods
+- 📸 **Photo Upload** - Upload new photos with mood tagging
 - 📊 **Visit Counter** - Tracks how many times each user has visited
 - 🔊 **Sound Effects** - Cute sound when changing photos (toggle on/off)
-- 🐱 **Purr Feature** - Pet the photo with your mouse and Toni will purr!
+- 🐱 **Purr Feature** - Hidden easter egg - pet the photo and hear purring!
 - 🎨 **Mosaic Background** - Beautiful subtle mosaic of cat photos in the background
-- 🎬 **Slideshow Mode** - Auto-play photos every 5 seconds
+- 🎬 **Slideshow Mode** - Auto-play photos with live countdown
 - 💾 **Download Button** - Save your favorite photos instantly
 - ⌨️ **Keyboard Shortcuts** - Spacebar for next photo, 1-5 for ratings, Arrow Down to download
+- 🔒 **Duplicate Detection** - Automatically prevents uploading the same photo twice
 
 ## 🚀 Quick Start
 
@@ -42,91 +47,122 @@ Your site will be live at: `https://yourusername.github.io/toni-gallery/`
 
 ## 📸 Adding More Photos
 
-### Update the Photo Array
-When adding photos, you need to update the `catPhotos` array in `index.html` (around line 273):
+### Easy Method: Use the Built-In Uploader! (RECOMMENDED)
+
+The easiest way to add photos is through the website itself:
+
+1. **Open the website** and log in with your username
+2. **Scroll to "📸 Upload New Photo"** section
+3. **Select photos**:
+   - Click to browse and select multiple photos (hold Ctrl/Cmd)
+   - Or drag & drop multiple photos onto the upload area
+4. **Tag each photo** with moods (click the 🏷️ Tag button):
+   - 😤 Unbridled Rage
+   - 😴 Lazy Boy
+   - 😇 Sweet Perfect Angel Cat
+   - 🤪 Weirdo
+5. **Click "⬆️ Upload All"** and wait for completion
+6. Done! Photos are live immediately
+
+**📦 Batch Upload Features:**
+- Upload 5, 10, 20+ photos at once
+- Preview all photos before uploading
+- Tag each individually with custom moods
+- Remove any photo from batch before uploading
+- Automatic duplicate detection
+- Progress tracking
+
+**See `BATCH_UPLOAD_GUIDE.md` for detailed instructions!**
+
+### Advanced Method: Manual Code Updates
+
+If you want to manually add photos (not using Cloudinary upload):
+
+1. Add photos to the `cats` folder
+2. Update the `catPhotos` array in `index.html`:
 
 ```javascript
 const catPhotos = [
-    { path: 'cats/cat1.jpg', moods: ['happy'] },
-    { path: 'cats/cat2.jpg', moods: ['silly'] },
-    { path: 'cats/cat3.jpg', moods: ['sleepy'] },
-    { path: 'cats/cat4.jpg', moods: ['majestic'] },
-    { path: 'cats/cat5.jpg', moods: ['happy', 'silly'] },
-    { path: 'cats/cat6.jpg', moods: ['sleepy', 'majestic'] }, // New photo!
-    // Add more here
+    { url: 'cats/cat1.jpg', moods: ['lazy_boy'] },
+    { url: 'cats/cat2.jpg', moods: ['weirdo'] },
+    // Or use Cloudinary URLs:
+    { url: 'https://res.cloudinary.com/...', moods: ['sweet_perfect_angel_cat'] },
 ];
 ```
 
-### Mood Tags
-Assign one or more moods to each photo:
-- `'happy'` - Energetic, playful, cheerful photos
-- `'silly'` - Funny, goofy, entertaining photos
-- `'sleepy'` - Calm, relaxed, resting photos
-- `'majestic'` - Elegant, regal, proud photos
+### Custom Mood Tags
 
-### Method 2: Let Others Add Photos
-If you're using GitHub:
-1. Others can fork your repository
-2. They add photos to the `cats` folder
-3. They update the `catPhotos` array with mood tags
-4. They create a Pull Request
-5. You review and merge it
+- `'unbridled_rage'` - Angry, frustrated, annoyed cat moments
+- `'lazy_boy'` - Calm, relaxed, sleeping, lounging
+- `'sweet_perfect_angel_cat'` - Cute, sweet, adorable moments
+- `'weirdo'` - Funny, bizarre, quirky behaviors
+
+You can assign multiple moods to each photo!
 
 ## 🎮 How to Use Features
 
-### Username System
-- First time: Enter any username (no password!)
-- Choose something memorable (e.g., "Sarah" or "Sarah&Tyler")
-- That's it! Your ratings are now saved to that username
-- Use the same username on any device to sync ratings (requires Firebase)
-- Click "Change User" to switch users
+### 🔐 Secret Code Access
+- First time: Enter username AND secret code: `toni_balogna`
+- Only people with the code can access the site
+- Protects your photos from random visitors
 
-### Photo Rating
+### 📦 Batch Upload (NEW!)
+- Upload multiple photos at once (5, 10, 20+)
+- Tag each photo individually with moods
+- Remove photos from batch before uploading
+- Auto-duplicate detection
+- **See `BATCH_UPLOAD_GUIDE.md` for complete guide!**
+
+### ✏️ Edit Tags (NEW!)
+- Change mood tags on already uploaded photos
+- Go to Favorites → Click "✏️ Edit" on any photo
+- Select/deselect moods and save
+- Updates everywhere (Firestore + local)
+- **See `BATCH_UPLOAD_GUIDE.md` for details!**
+
+### 💕 Photo Rating & Favorites
 - Click the hearts below the photo to rate it (1-5 hearts)
+- Click the ✖ button next to hearts to clear rating
 - Ratings are saved per username
 - With Firebase: Ratings sync across all devices
-- Without Firebase: Ratings save per-browser only
+- Scroll to "⭐ Your Favorites" to see all rated photos
+- Filter favorites by rating (All, 5⭐, 4⭐, etc.)
+- Download or view any favorite
 
-### Mood Selection
-- Click mood buttons at the top to filter photos
+### 🎭 Mood Selection
+- Click mood buttons at the top to filter photos:
+  - 😤 **Unbridled Rage**
+  - 😴 **Lazy Boy**
+  - 😇 **Sweet Perfect Angel Cat**
+  - 🤪 **Weirdo**
 - "All Moods" shows everything
 - Other buttons show only photos with that mood tag
 
-### Purr Feature (NEW! 🐱)
-- **Desktop**: Hover over the photo and move your mouse around (like petting)
-- **Mobile**: Press and hold the photo for 2 seconds
-- Keep "petting" for ~1.5 seconds and Toni will purr!
-- A cute indicator shows your progress
-- The purr sound is generated with realistic low-frequency rumbling
+### 🐱 Purr Feature (Hidden Easter Egg!)
+- **Desktop**: Move mouse around photo (like petting)
+- **Mobile**: Touch and move finger on photo
+- Keep "petting" for a few seconds and Toni will purr!
+- Sound plays softly and stops when you stop petting
+- 10 second auto-stop if you hold still
 
-### Mosaic Background (NEW! 🎨)
+### 🎨 Mosaic Background
 - Subtle background shows a beautiful mosaic of cat photos
-- Automatically uses the first 5 photos in your collection
+- Automatically uses photos from your collection
 - Adds depth and visual interest without being distracting
-- Looks professional and polished!
 
-### Slideshow Mode
+### 🎬 Slideshow Mode
 - Toggle the "Slideshow" switch to auto-advance every 5 seconds
+- Live countdown shows time until next photo
 - Perfect for showing off Toni to friends!
 
-### Sound Effects
-- Toggle the "Sound" switch to enable/disable the cute beep
-- **Pro tip**: You can add a real meow sound by:
-  1. Get a `meow.mp3` file
-  2. Put it in the same folder as `index.html`
-  3. Update the audio element in the HTML (instructions in code comments)
-
-### Download Photos
+### 💾 Download Photos
 - Click "💾 Download" to save the current photo
 - Great for setting as wallpaper or sharing!
 
-### Keyboard Shortcuts
+### ⌨️ Keyboard Shortcuts
 - **Spacebar** or **→** (Right Arrow): Next photo
 - **1-5**: Rate current photo with that many hearts
 - **↓** (Down Arrow): Download current photo
-
-### Easter Eggs
-- Try petting the photo - Toni might purr! 🐱💕
 
 ## 🎨 Customization
 

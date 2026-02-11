@@ -441,6 +441,11 @@
             font-size: 0.85em;
         }
         
+        .edit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
         .no-favorites {
             text-align: center;
             padding: 40px;
@@ -513,6 +518,116 @@
         
         #fileInput {
             display: none;
+        }
+        
+        /* Batch Upload Preview */
+        .batch-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .batch-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .batch-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        
+        .batch-item-moods {
+            padding: 8px;
+            font-size: 0.75em;
+            min-height: 40px;
+        }
+        
+        .batch-item-actions {
+            padding: 8px;
+            display: flex;
+            gap: 5px;
+            justify-content: space-between;
+        }
+        
+        .batch-item-actions button {
+            padding: 6px 12px;
+            font-size: 0.8em;
+        }
+        
+        .remove-batch-item {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(245, 87, 108, 0.9);
+            color: white;
+            border: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        
+        .remove-batch-item:hover {
+            background: #f5576c;
+            transform: scale(1.1);
+        }
+        
+        /* Edit Tags Modal */
+        .edit-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+        
+        .edit-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        .edit-modal-content h3 {
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+        
+        .edit-preview-img {
+            width: 100%;
+            max-height: 200px;
+            object-fit: contain;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .favorite-actions button {
+            flex: 1;
+            padding: 8px 16px;
+            font-size: 0.85em;
+        }
+        
+        .edit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         
         .mood-tags {
@@ -833,9 +948,11 @@
             <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
                 <div class="upload-icon">🐱📷</div>
                 <div class="upload-text">Click to upload or drag and drop</div>
-                <div class="upload-hint">JPG, JPEG, PNG up to 10MB</div>
-                <input type="file" id="fileInput" accept="image/jpeg,image/jpg,image/png" />
+                <div class="upload-hint">JPG, JPEG, PNG up to 10MB • Multiple files supported</div>
+                <input type="file" id="fileInput" accept="image/jpeg,image/jpg,image/png" multiple />
             </div>
+            
+            <div id="batchPreview" class="batch-preview"></div>
             
             <div class="upload-preview" id="uploadPreview">
                 <img id="previewImage" class="preview-image" alt="Preview" />
@@ -933,6 +1050,7 @@
         // Upload state
         let selectedFile = null;
         let selectedMoods = [];
+        let batchFiles = []; // For batch upload
         
         // Purr functionality state
         let purrProgress = 0;
@@ -1601,6 +1719,7 @@
                         <div class="favorite-actions">
                             <button class="success" onclick="downloadFavorite('${escapedPath}')">💾</button>
                             <button onclick="viewFavoritePhoto('${escapedPath}')">👁️ View</button>
+                            <button class="edit-btn" onclick="editPhotoTags('${escapedPath}')">✏️ Edit</button>
                         </div>
                     </div>
                 `;
@@ -1681,17 +1800,100 @@
             document.body.removeChild(link);
         }
         
+        function editPhotoTags(photoUrl) {
+            // Find the photo in catPhotos array
+            const photo = catPhotos.find(p => p.url === photoUrl);
+            if (!photo) {
+                alert('Photo not found');
+                return;
+            }
+            
+            // Create modal for editing tags
+            const modal = document.createElement('div');
+            modal.className = 'edit-modal';
+            modal.innerHTML = `
+                <div class="edit-modal-content">
+                    <h3>✏️ Edit Photo Tags</h3>
+                    <img src="${photoUrl}" class="edit-preview-img" />
+                    <div class="mood-tags-label" style="text-align: center; margin: 20px 0; font-weight: 600; color: #667eea;">
+                        Current moods: ${photo.moods && photo.moods.length > 0 ? photo.moods.map(m => getMoodEmoji(m)).join(' ') : 'None'}
+                    </div>
+                    <div class="mood-tags" id="editMoodTags">
+                        <div class="mood-tag ${photo.moods && photo.moods.includes('unbridled_rage') ? 'selected' : ''}" data-mood="unbridled_rage">😤 Unbridled Rage</div>
+                        <div class="mood-tag ${photo.moods && photo.moods.includes('lazy_boy') ? 'selected' : ''}" data-mood="lazy_boy">😴 Lazy Boy</div>
+                        <div class="mood-tag ${photo.moods && photo.moods.includes('sweet_perfect_angel_cat') ? 'selected' : ''}" data-mood="sweet_perfect_angel_cat">😇 Sweet Perfect Angel Cat</div>
+                        <div class="mood-tag ${photo.moods && photo.moods.includes('weirdo') ? 'selected' : ''}" data-mood="weirdo">🤪 Weirdo</div>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button class="success" style="flex: 1;" onclick="saveEditedTags('${photoUrl}')">💾 Save Changes</button>
+                        <button class="secondary" style="flex: 1;" onclick="closeEditModal()">❌ Cancel</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Add click handlers to mood tags
+            modal.querySelectorAll('.mood-tag').forEach(tag => {
+                tag.addEventListener('click', function() {
+                    this.classList.toggle('selected');
+                });
+            });
+        }
+        
+        async function saveEditedTags(photoUrl) {
+            const photo = catPhotos.find(p => p.url === photoUrl);
+            if (!photo) return;
+            
+            // Get selected moods
+            const selectedTags = Array.from(document.querySelectorAll('#editMoodTags .mood-tag.selected'));
+            const newMoods = selectedTags.map(tag => tag.getAttribute('data-mood'));
+            
+            // Update local array
+            photo.moods = newMoods;
+            
+            // Update Firestore if connected
+            if (db && currentUsername) {
+                try {
+                    // Find the document with this URL
+                    const photosRef = db.collection('users').doc(currentUsername).collection('photos');
+                    const querySnapshot = await photosRef.where('url', '==', photoUrl).get();
+                    
+                    if (!querySnapshot.empty) {
+                        const doc = querySnapshot.docs[0];
+                        await doc.ref.update({
+                            moods: newMoods,
+                            updatedAt: new Date()
+                        });
+                        console.log('Tags updated in Firestore');
+                    }
+                } catch (error) {
+                    console.error('Error updating Firestore:', error);
+                }
+            }
+            
+            closeEditModal();
+            alert('✅ Tags updated successfully!');
+            
+            // Reload favorites to show updated moods
+            loadFavorites();
+        }
+        
+        function closeEditModal() {
+            const modal = document.querySelector('.edit-modal');
+            if (modal) modal.remove();
+        }
+        
         // Upload Functionality
         function initializeUpload() {
             const uploadArea = document.getElementById('uploadArea');
             const fileInput = document.getElementById('fileInput');
             
-            // File input change
+            // File input change - handle multiple files
             fileInput.addEventListener('change', function(e) {
-                handleFileSelect(e.target.files[0]);
+                handleBatchFileSelect(Array.from(e.target.files));
             });
             
-            // Drag and drop
+            // Drag and drop - handle multiple files
             uploadArea.addEventListener('dragover', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -1709,11 +1911,253 @@
                 e.stopPropagation();
                 uploadArea.classList.remove('drag-over');
                 
-                const files = e.dataTransfer.files;
+                const files = Array.from(e.dataTransfer.files);
                 if (files.length > 0) {
-                    handleFileSelect(files[0]);
+                    handleBatchFileSelect(files);
                 }
             });
+        }
+        
+        async function handleBatchFileSelect(files) {
+            if (!files || files.length === 0) return;
+            
+            const validFiles = [];
+            
+            // Validate each file
+            for (const file of files) {
+                // Validate file type
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+                if (!validTypes.includes(file.type)) {
+                    alert(`Skipping ${file.name}: Please select JPG, JPEG, or PNG images only`);
+                    continue;
+                }
+                
+                // Validate file size (10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    alert(`Skipping ${file.name}: File size must be less than 10MB`);
+                    continue;
+                }
+                
+                // Check for duplicates
+                const isDuplicate = await checkForDuplicate(file);
+                if (isDuplicate) {
+                    alert(`Skipping ${file.name}: This photo has already been uploaded!`);
+                    continue;
+                }
+                
+                validFiles.push(file);
+            }
+            
+            if (validFiles.length === 0) {
+                alert('No valid files to upload');
+                return;
+            }
+            
+            // Create batch items
+            batchFiles = await Promise.all(validFiles.map(async file => {
+                const reader = new FileReader();
+                const preview = await new Promise((resolve) => {
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
+                
+                return {
+                    file: file,
+                    preview: preview,
+                    moods: [],
+                    id: Date.now() + Math.random()
+                };
+            }));
+            
+            renderBatchPreview();
+        }
+        
+        function renderBatchPreview() {
+            const batchPreview = document.getElementById('batchPreview');
+            
+            if (batchFiles.length === 0) {
+                batchPreview.innerHTML = '';
+                return;
+            }
+            
+            batchPreview.innerHTML = batchFiles.map(item => `
+                <div class="batch-item" data-id="${item.id}">
+                    <button class="remove-batch-item" onclick="removeBatchItem('${item.id}')">✕</button>
+                    <img src="${item.preview}" alt="Preview" />
+                    <div class="batch-item-moods" id="moods-${item.id}">
+                        ${item.moods.length > 0 ? item.moods.map(m => getMoodEmoji(m)).join(' ') : 'No moods selected'}
+                    </div>
+                    <div class="batch-item-actions">
+                        <button class="secondary" onclick="selectMoodsForBatchItem('${item.id}')">🏷️ Tag</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Add upload all button if batch items exist
+            if (batchFiles.length > 0 && !document.getElementById('uploadAllBtn')) {
+                const uploadSection = document.getElementById('uploadSection');
+                const uploadAllBtn = document.createElement('button');
+                uploadAllBtn.id = 'uploadAllBtn';
+                uploadAllBtn.className = 'success';
+                uploadAllBtn.style.cssText = 'margin: 20px auto; display: block; padding: 15px 40px; font-size: 1.1em;';
+                uploadAllBtn.innerHTML = `⬆️ Upload All (${batchFiles.length} photos)`;
+                uploadAllBtn.onclick = uploadBatchPhotos;
+                
+                batchPreview.after(uploadAllBtn);
+            } else if (batchFiles.length === 0) {
+                const uploadAllBtn = document.getElementById('uploadAllBtn');
+                if (uploadAllBtn) uploadAllBtn.remove();
+            } else {
+                // Update count
+                const uploadAllBtn = document.getElementById('uploadAllBtn');
+                if (uploadAllBtn) {
+                    uploadAllBtn.innerHTML = `⬆️ Upload All (${batchFiles.length} photos)`;
+                }
+            }
+        }
+        
+        function getMoodEmoji(mood) {
+            const moodMap = {
+                'unbridled_rage': '😤',
+                'lazy_boy': '😴',
+                'sweet_perfect_angel_cat': '😇',
+                'weirdo': '🤪'
+            };
+            return moodMap[mood] || '🐱';
+        }
+        
+        function removeBatchItem(id) {
+            batchFiles = batchFiles.filter(item => item.id !== parseFloat(id));
+            renderBatchPreview();
+        }
+        
+        function selectMoodsForBatchItem(id) {
+            const item = batchFiles.find(i => i.id === parseFloat(id));
+            if (!item) return;
+            
+            // Create modal for mood selection
+            const modal = document.createElement('div');
+            modal.className = 'edit-modal';
+            modal.innerHTML = `
+                <div class="edit-modal-content">
+                    <h3>Select Moods for ${item.file.name}</h3>
+                    <img src="${item.preview}" class="edit-preview-img" />
+                    <div class="mood-tags" id="batchMoodTags">
+                        <div class="mood-tag ${item.moods.includes('unbridled_rage') ? 'selected' : ''}" data-mood="unbridled_rage">😤 Unbridled Rage</div>
+                        <div class="mood-tag ${item.moods.includes('lazy_boy') ? 'selected' : ''}" data-mood="lazy_boy">😴 Lazy Boy</div>
+                        <div class="mood-tag ${item.moods.includes('sweet_perfect_angel_cat') ? 'selected' : ''}" data-mood="sweet_perfect_angel_cat">😇 Sweet Perfect Angel Cat</div>
+                        <div class="mood-tag ${item.moods.includes('weirdo') ? 'selected' : ''}" data-mood="weirdo">🤪 Weirdo</div>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button class="success" style="flex: 1;" onclick="saveBatchItemMoods('${id}')">💾 Save</button>
+                        <button class="secondary" style="flex: 1;" onclick="closeBatchMoodModal()">❌ Cancel</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Add click handlers to mood tags
+            modal.querySelectorAll('.mood-tag').forEach(tag => {
+                tag.addEventListener('click', function() {
+                    this.classList.toggle('selected');
+                });
+            });
+        }
+        
+        function saveBatchItemMoods(id) {
+            const item = batchFiles.find(i => i.id === parseFloat(id));
+            if (!item) return;
+            
+            const selectedTags = Array.from(document.querySelectorAll('#batchMoodTags .mood-tag.selected'));
+            item.moods = selectedTags.map(tag => tag.getAttribute('data-mood'));
+            
+            closeBatchMoodModal();
+            renderBatchPreview();
+        }
+        
+        function closeBatchMoodModal() {
+            const modal = document.querySelector('.edit-modal');
+            if (modal) modal.remove();
+        }
+        
+        async function uploadBatchPhotos() {
+            if (batchFiles.length === 0) {
+                alert('No photos to upload');
+                return;
+            }
+            
+            const uploadBtn = document.getElementById('uploadAllBtn');
+            if (uploadBtn) uploadBtn.disabled = true;
+            
+            let successCount = 0;
+            let failCount = 0;
+            
+            for (let i = 0; i < batchFiles.length; i++) {
+                const item = batchFiles[i];
+                
+                if (uploadBtn) {
+                    uploadBtn.innerHTML = `⏳ Uploading ${i + 1}/${batchFiles.length}...`;
+                }
+                
+                try {
+                    await uploadSinglePhoto(item.file, item.moods);
+                    successCount++;
+                } catch (error) {
+                    console.error('Upload failed:', error);
+                    failCount++;
+                }
+            }
+            
+            batchFiles = [];
+            renderBatchPreview();
+            
+            alert(`✅ Upload complete!\n\n${successCount} photos uploaded successfully${failCount > 0 ? `\n${failCount} photos failed` : ''}`);
+            
+            // Reload the gallery
+            await loadUploadedPhotos();
+            loadRandomPhoto();
+        }
+        
+        async function uploadSinglePhoto(file, moods) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', cloudinaryConfig.uploadPreset);
+            formData.append('folder', cloudinaryConfig.folder);
+            
+            const response = await fetch(cloudinaryConfig.uploadUrl, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error('Upload failed');
+            }
+            
+            const data = await response.json();
+            const photoUrl = data.secure_url;
+            
+            // Generate and save hash
+            const hash = await generateFileHash(file);
+            savePhotoHash(hash);
+            
+            // Save to Firestore if connected
+            if (db && currentUsername) {
+                try {
+                    await db.collection('users').doc(currentUsername).collection('photos').add({
+                        url: photoUrl,
+                        moods: moods,
+                        uploadedAt: new Date(),
+                        hash: hash
+                    });
+                } catch (error) {
+                    console.error('Error saving to Firestore:', error);
+                }
+            }
+            
+            // Add to local array
+            catPhotos.push({ url: photoUrl, moods: moods });
+            
+            return photoUrl;
         }
         
         function handleFileSelect(file) {
@@ -1922,12 +2366,16 @@
         function resetUpload() {
             selectedFile = null;
             selectedMoods = [];
+            batchFiles = [];
             document.getElementById('fileInput').value = '';
             document.getElementById('uploadPreview').classList.remove('show');
             document.getElementById('uploadPreview').style.opacity = '1';
             document.getElementById('uploadProgress').classList.remove('show');
             document.getElementById('progressFill').style.width = '0%';
             document.getElementById('progressFill').textContent = '0%';
+            
+            // Clear batch preview
+            renderBatchPreview();
             
             // Reset mood tags
             document.querySelectorAll('.mood-tag').forEach(tag => {
