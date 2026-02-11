@@ -18,7 +18,7 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -50,28 +50,35 @@
                 90% 80%,
                 50% 90%;
             background-repeat: no-repeat;
-            opacity: 0.08;
+            opacity: 0.05;
             z-index: 0;
             pointer-events: none;
             filter: blur(1px);
         }
         
         .container {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 800px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5);
+            max-width: 900px;
             width: 100%;
             position: relative;
             z-index: 1;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         h1 {
             text-align: center;
-            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 10px;
-            font-size: 2em;
+            font-size: 2.5em;
+            font-weight: 700;
+            letter-spacing: -1px;
         }
         
         .visit-counter {
@@ -91,25 +98,27 @@
         }
         
         .mood-btn {
-            padding: 8px 16px;
-            border: 2px solid #667eea;
-            background: white;
-            color: #667eea;
-            border-radius: 20px;
+            padding: 10px 20px;
+            border: 2px solid transparent;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 25px;
             cursor: pointer;
             font-size: 0.9em;
             transition: all 0.3s;
             font-weight: 600;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
         
         .mood-btn:hover {
-            background: #667eea;
-            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
         }
         
         .mood-btn.active {
-            background: #667eea;
-            color: white;
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            box-shadow: 0 6px 25px rgba(118, 75, 162, 0.6);
+            transform: translateY(-2px);
         }
         
         .photo-container {
@@ -117,12 +126,13 @@
             width: 100%;
             max-height: 600px;
             overflow: hidden;
-            border-radius: 10px;
+            border-radius: 16px;
             background: #f0f0f0;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
         }
         
         #catPhoto {
@@ -131,44 +141,12 @@
             width: auto;
             height: auto;
             display: block;
-            border-radius: 10px;
+            border-radius: 16px;
             transition: transform 0.3s ease;
         }
         
         .photo-container:hover #catPhoto {
-            transform: scale(1.02);
-        }
-        
-        /* Purr indicator */
-        .purr-indicator {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            color: #667eea;
-            font-weight: 600;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .purr-indicator.show {
-            opacity: 1;
-        }
-        
-        .purr-indicator.active {
-            background: #667eea;
-            color: white;
-            animation: purrPulse 0.5s ease infinite;
-        }
-        
-        @keyframes purrPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+            transform: scale(1.01);
         }
         
         .rating-container {
@@ -224,28 +202,39 @@
             font-size: 1.1em;
             border-radius: 50px;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s;
             font-weight: 600;
             display: flex;
             align-items: center;
             gap: 8px;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
         
         button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.6);
         }
         
         button:active {
-            transform: translateY(0);
+            transform: translateY(-1px);
         }
         
         button.secondary {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 6px 20px rgba(245, 87, 108, 0.4);
+        }
+        
+        button.secondary:hover {
+            box-shadow: 0 10px 30px rgba(245, 87, 108, 0.6);
         }
         
         button.success {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+        }
+        
+        button.success:hover {
+            box-shadow: 0 10px 30px rgba(79, 172, 254, 0.6);
         }
         
         .controls-row {
@@ -311,10 +300,137 @@
         .slideshow-status {
             text-align: center;
             color: #667eea;
-            font-size: 0.9em;
+            font-size: 1em;
             margin-top: 10px;
             font-weight: 600;
-            min-height: 20px;
+            min-height: 30px;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .slideshow-status.countdown {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 1.2em;
+        }
+        
+        /* My Favorites Section */
+        .favorites-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #f0f0f0;
+        }
+        
+        .favorites-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .favorites-header h2 {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 1.8em;
+            font-weight: 700;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
+        }
+        
+        .filter-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(240, 147, 251, 0.5);
+        }
+        
+        .filter-btn.active {
+            background: linear-gradient(135deg, #764ba2 0%, #f5576c 100%);
+        }
+        
+        .favorites-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .favorite-item {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            background: #f8f9fa;
+        }
+        
+        .favorite-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        }
+        
+        .favorite-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+        }
+        
+        .favorite-rating {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #ff6b6b;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .favorite-actions {
+            padding: 12px;
+            background: white;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .favorite-actions button {
+            flex: 1;
+            padding: 8px 16px;
+            font-size: 0.85em;
+        }
+        
+        .no-favorites {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 1.1em;
+        }
+        
+        .no-favorites-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
         }
         
         .loading {
@@ -485,7 +601,6 @@
         
         <div class="photo-container" id="photoContainer">
             <img id="catPhoto" alt="A cute cat" />
-            <div class="purr-indicator" id="purrIndicator">Keep petting... 🐱</div>
         </div>
         
         <div class="rating-container">
@@ -520,6 +635,21 @@
         </div>
         
         <div class="slideshow-status" id="slideshowStatus"></div>
+        
+        <!-- My Favorites Section -->
+        <div class="favorites-section" id="favoritesSection">
+            <div class="favorites-header">
+                <h2>💕 My Favorites</h2>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" onclick="filterFavorites('all')">All</button>
+                    <button class="filter-btn" onclick="filterFavorites(5)">5 ♥</button>
+                    <button class="filter-btn" onclick="filterFavorites(4)">4+ ♥</button>
+                </div>
+            </div>
+            <div class="favorites-grid" id="favoritesGrid">
+                <!-- Favorites will be populated here -->
+            </div>
+        </div>
     </div>
 
     <!-- Audio element for meow sound -->
@@ -573,8 +703,11 @@
         let currentMood = 'all';
         let soundEnabled = true;
         let slideshowInterval = null;
+        let slideshowCountdown = null;
+        let slideshowTimeLeft = 5;
         let visitCount = 0;
         let currentUser = null;
+        let currentFavoriteFilter = 'all';
         
         // Purr functionality state
         let purrProgress = 0;
@@ -590,6 +723,7 @@
             loadRandomPhoto();
             initializeMeowSound();
             initializePurrFeature();
+            loadFavorites();
         });
         
         // Username Management
@@ -748,14 +882,12 @@
             imgElement.src = currentPhoto.path;
             imgElement.alt = 'A cute cat photo';
             
-            // Play sound
-            if (soundEnabled) {
-                playMeow();
-            }
-            
             // Load saved rating
             const savedRating = getRating(currentPhoto.path);
             updateRatingDisplay(savedRating);
+            
+            // Reload favorites to update current photo highlight
+            loadFavorites();
         }
         
         // Rating system with Firebase sync
@@ -780,10 +912,8 @@
             
             updateRatingDisplay(rating);
             
-            // Play sound
-            if (soundEnabled) {
-                playMeow();
-            }
+            // Reload favorites to show updated rating
+            loadFavorites();
         }
         
         function getRating(photoPath) {
@@ -841,10 +971,6 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
-            if (soundEnabled) {
-                playMeow();
-            }
         }
         
         // Sound control
@@ -924,25 +1050,21 @@
             soundEnabled = document.getElementById('soundToggle').checked;
         }
         
-        // Purr Feature - Pet the cat!
+        // Purr Feature - Hidden Easter Egg!
         function initializePurrFeature() {
             const photoContainer = document.getElementById('photoContainer');
-            const purrIndicator = document.getElementById('purrIndicator');
             let isMouseOver = false;
             
-            // Mouse enter - show indicator
+            // Mouse enter
             photoContainer.addEventListener('mouseenter', function() {
                 isMouseOver = true;
-                purrIndicator.classList.add('show');
             });
             
-            // Mouse leave - hide indicator and reset
+            // Mouse leave - reset
             photoContainer.addEventListener('mouseleave', function() {
                 isMouseOver = false;
                 purrProgress = 0;
                 isPurring = false;
-                purrIndicator.classList.remove('show', 'active');
-                purrIndicator.textContent = 'Keep petting... 🐱';
             });
             
             // Track mouse movement (petting)
@@ -955,15 +1077,6 @@
                 // Only count movement if it's continuous (within 100ms)
                 if (timeSinceLastMove < 0.1) {
                     purrProgress += 0.016; // Approximately 60fps
-                    
-                    // Update indicator based on progress
-                    const progressPercent = (purrProgress / purrThreshold) * 100;
-                    
-                    if (progressPercent > 80) {
-                        purrIndicator.textContent = 'Almost there! 😻';
-                    } else if (progressPercent > 50) {
-                        purrIndicator.textContent = 'Keep going... 🐱';
-                    }
                     
                     // Trigger purr when threshold reached
                     if (purrProgress >= purrThreshold && !isPurring) {
@@ -981,8 +1094,6 @@
             let touchStartTime = 0;
             photoContainer.addEventListener('touchstart', function(e) {
                 touchStartTime = Date.now();
-                purrIndicator.classList.add('show');
-                purrIndicator.textContent = 'Keep holding... 🐱';
             });
             
             photoContainer.addEventListener('touchend', function(e) {
@@ -990,18 +1101,12 @@
                 
                 if (touchDuration >= 2 && !isPurring) {
                     triggerPurr();
-                } else {
-                    purrIndicator.classList.remove('show');
                 }
             });
         }
         
         function triggerPurr() {
             isPurring = true;
-            const purrIndicator = document.getElementById('purrIndicator');
-            
-            purrIndicator.textContent = 'Purrrr... 😻💕';
-            purrIndicator.classList.add('active');
             
             // Play purr sound
             playPurr();
@@ -1010,30 +1115,41 @@
             setTimeout(() => {
                 isPurring = false;
                 purrProgress = 0;
-                purrIndicator.classList.remove('active', 'show');
-                purrIndicator.textContent = 'Keep petting... 🐱';
             }, 3000);
         }
         
-        // Slideshow control
+        // Slideshow control with countdown
         function toggleSlideshow() {
             const isEnabled = document.getElementById('slideshowToggle').checked;
-            const statusElement = document.getElementById('slideshowStatus');
             
             if (isEnabled) {
                 startSlideshow();
-                statusElement.textContent = '▶️ Slideshow active (5s intervals)';
             } else {
                 stopSlideshow();
-                statusElement.textContent = '';
             }
         }
         
         function startSlideshow() {
             stopSlideshow(); // Clear any existing interval
+            
+            slideshowTimeLeft = 5;
+            updateSlideshowStatus();
+            
+            // Main slideshow interval (load photo every 5s)
             slideshowInterval = setInterval(() => {
                 loadRandomPhoto();
-            }, 5000); // 5 seconds
+                slideshowTimeLeft = 5;
+            }, 5000);
+            
+            // Countdown interval (update every second)
+            slideshowCountdown = setInterval(() => {
+                slideshowTimeLeft--;
+                updateSlideshowStatus();
+                
+                if (slideshowTimeLeft <= 0) {
+                    slideshowTimeLeft = 5;
+                }
+            }, 1000);
         }
         
         function stopSlideshow() {
@@ -1041,6 +1157,21 @@
                 clearInterval(slideshowInterval);
                 slideshowInterval = null;
             }
+            
+            if (slideshowCountdown) {
+                clearInterval(slideshowCountdown);
+                slideshowCountdown = null;
+            }
+            
+            const statusElement = document.getElementById('slideshowStatus');
+            statusElement.textContent = '';
+            statusElement.classList.remove('countdown');
+        }
+        
+        function updateSlideshowStatus() {
+            const statusElement = document.getElementById('slideshowStatus');
+            statusElement.classList.add('countdown');
+            statusElement.textContent = `Next photo in ${slideshowTimeLeft}s...`;
         }
         
         // Keyboard shortcuts
@@ -1055,6 +1186,84 @@
                 ratePhoto(parseInt(e.key));
             }
         });
+        
+        // Favorites Section
+        function loadFavorites() {
+            if (!currentUser) return;
+            
+            const ratings = JSON.parse(localStorage.getItem(`toniRatings_${currentUser}`) || '{}');
+            const favoritesGrid = document.getElementById('favoritesGrid');
+            
+            // Get all rated photos
+            const ratedPhotos = Object.entries(ratings)
+                .map(([path, rating]) => ({ path, rating }))
+                .filter(photo => {
+                    if (currentFavoriteFilter === 'all') return photo.rating > 0;
+                    if (currentFavoriteFilter === 5) return photo.rating === 5;
+                    if (currentFavoriteFilter === 4) return photo.rating >= 4;
+                    return photo.rating > 0;
+                })
+                .sort((a, b) => b.rating - a.rating); // Sort by rating, highest first
+            
+            if (ratedPhotos.length === 0) {
+                favoritesGrid.innerHTML = `
+                    <div class="no-favorites">
+                        <div class="no-favorites-icon">💔</div>
+                        <p>No rated photos yet! Start rating some photos to see them here.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            favoritesGrid.innerHTML = ratedPhotos.map(photo => {
+                const hearts = '♥'.repeat(photo.rating);
+                return `
+                    <div class="favorite-item">
+                        <img src="${photo.path}" alt="Favorite cat photo" onclick="viewFavoritePhoto('${photo.path}')">
+                        <div class="favorite-rating">${hearts}</div>
+                        <div class="favorite-actions">
+                            <button class="success" onclick="downloadFavorite('${photo.path}')">💾</button>
+                            <button onclick="viewFavoritePhoto('${photo.path}')">👁️ View</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function filterFavorites(filter) {
+            currentFavoriteFilter = filter;
+            
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            loadFavorites();
+        }
+        
+        function viewFavoritePhoto(path) {
+            // Find the photo in catPhotos array
+            const photo = catPhotos.find(p => p.path === path);
+            if (photo) {
+                currentPhoto = photo;
+                document.getElementById('catPhoto').src = photo.path;
+                const savedRating = getRating(photo.path);
+                updateRatingDisplay(savedRating);
+                
+                // Scroll to top
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+        
+        function downloadFavorite(path) {
+            const link = document.createElement('a');
+            link.href = path;
+            link.download = path.split('/').pop();
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
     </script>
 </body>
 </html>
