@@ -8,6 +8,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     
     <style>
         * {
@@ -433,6 +434,153 @@
             margin-bottom: 15px;
         }
         
+        /* Upload Section */
+        .upload-section {
+            margin-top: 30px;
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-radius: 16px;
+            border: 2px dashed rgba(102, 126, 234, 0.3);
+        }
+        
+        .upload-section h2 {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 1.8em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .upload-area {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            border: 2px dashed #667eea;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f8f9fa;
+            transform: translateY(-2px);
+        }
+        
+        .upload-area.drag-over {
+            border-color: #764ba2;
+            background: #f0f4ff;
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .upload-text {
+            font-size: 1.1em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .upload-hint {
+            font-size: 0.9em;
+            color: #999;
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        .mood-tags {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .mood-tag {
+            padding: 8px 16px;
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .mood-tag:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .mood-tag.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #764ba2;
+        }
+        
+        .upload-preview {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .upload-preview.show {
+            display: block;
+        }
+        
+        .preview-image {
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 12px;
+            margin: 20px auto;
+            display: block;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .upload-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .upload-progress {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .upload-progress.show {
+            display: block;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+        
         .loading {
             text-align: center;
             color: #666;
@@ -573,7 +721,14 @@
     <div id="usernameModal" class="modal-overlay hidden">
         <div class="modal-content">
             <h2>Welcome! 💕</h2>
-            <p>Enter a username to save your ratings and access them from any device!</p>
+            <p>Enter the secret code and your username to access Toni's gallery!</p>
+            <input 
+                type="password" 
+                id="secretCodeInput" 
+                class="username-input" 
+                placeholder="Secret code..."
+                maxlength="50"
+            />
             <input 
                 type="text" 
                 id="usernameInput" 
@@ -593,10 +748,10 @@
         
         <div class="mood-selector">
             <button class="mood-btn active" data-mood="all" onclick="selectMood('all')">✨ All Moods</button>
-            <button class="mood-btn" data-mood="happy" onclick="selectMood('happy')">😊 Happy</button>
-            <button class="mood-btn" data-mood="silly" onclick="selectMood('silly')">🤪 Silly</button>
-            <button class="mood-btn" data-mood="sleepy" onclick="selectMood('sleepy')">😴 Sleepy</button>
-            <button class="mood-btn" data-mood="majestic" onclick="selectMood('majestic')">👑 Majestic</button>
+            <button class="mood-btn" data-mood="unbridled_rage" onclick="selectMood('unbridled_rage')">😤 Unbridled Rage</button>
+            <button class="mood-btn" data-mood="lazy_boy" onclick="selectMood('lazy_boy')">😴 Lazy Boy</button>
+            <button class="mood-btn" data-mood="sweet_perfect_angel_cat" onclick="selectMood('sweet_perfect_angel_cat')">😇 Sweet Perfect Angel Cat</button>
+            <button class="mood-btn" data-mood="weirdo" onclick="selectMood('weirdo')">🤪 Weirdo</button>
         </div>
         
         <div class="photo-container" id="photoContainer">
@@ -650,6 +805,46 @@
                 <!-- Favorites will be populated here -->
             </div>
         </div>
+        
+        <!-- Upload Section -->
+        <div class="upload-section" id="uploadSection">
+            <h2>📸 Upload New Photo</h2>
+            
+            <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                <div class="upload-icon">🐱📷</div>
+                <div class="upload-text">Click to upload or drag and drop</div>
+                <div class="upload-hint">JPG, JPEG, PNG up to 10MB</div>
+                <input type="file" id="fileInput" accept="image/jpeg,image/jpg,image/png" />
+            </div>
+            
+            <div class="upload-preview" id="uploadPreview">
+                <img id="previewImage" class="preview-image" alt="Preview" />
+                
+                <div class="mood-tags-label" style="text-align: center; margin-top: 20px; font-weight: 600; color: #667eea;">
+                    Select Moods (click multiple):
+                </div>
+                <div class="mood-tags" id="moodTags">
+                    <div class="mood-tag" data-mood="unbridled_rage" onclick="toggleMoodTag('unbridled_rage')">😤 Unbridled Rage</div>
+                    <div class="mood-tag" data-mood="lazy_boy" onclick="toggleMoodTag('lazy_boy')">😴 Lazy Boy</div>
+                    <div class="mood-tag" data-mood="sweet_perfect_angel_cat" onclick="toggleMoodTag('sweet_perfect_angel_cat')">😇 Sweet Perfect Angel Cat</div>
+                    <div class="mood-tag" data-mood="weirdo" onclick="toggleMoodTag('weirdo')">🤪 Weirdo</div>
+                </div>
+                
+                <div class="upload-buttons">
+                    <button class="success" onclick="uploadPhoto()">✅ Upload Photo</button>
+                    <button class="secondary" onclick="cancelUpload()">❌ Cancel</button>
+                </div>
+            </div>
+            
+            <div class="upload-progress" id="uploadProgress">
+                <div style="text-align: center; color: #667eea; font-weight: 600; margin-bottom: 10px;">
+                    Uploading...
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%">0%</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Audio element for meow sound -->
@@ -671,12 +866,14 @@
 
         // Initialize Firebase
         let db = null;
+        let storage = null;
         let firebaseEnabled = false;
         
         try {
             if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
                 firebase.initializeApp(firebaseConfig);
                 db = firebase.firestore();
+                storage = firebase.storage();
                 firebaseEnabled = true;
                 console.log("Firebase initialized successfully!");
             } else {
@@ -687,15 +884,15 @@
         }
 
         // Photo configuration with moods
-        // Format: { path: 'cats/cat1.jpg', moods: ['happy', 'silly'] }
+        // Format: { path: 'cats/cat1.jpg', moods: ['unbridled_rage', 'weirdo'] }
         const catPhotos = [
-            { path: 'cats/2B182830-4F16-4F90-874C-B756EC85A7DC_1_105_c.jpeg', moods: ['happy'] },
-            { path: 'cats/7B248BDD-9AEE-4565-9C36-0182C06CC8D9_1_105_c.jpeg', moods: ['silly'] },
-            { path: 'cats/296458B9-5521-425D-BDB3-20C5A1DA6E81_1_105_c.jpeg', moods: ['sleepy'] },
-            { path: 'cats/2144263C-DC3D-4615-85B7-859282029185_1_105_c.jpeg', moods: ['majestic'] },
-            { path: 'cats/F8C03863-7F69-4D1B-BEA7-15BE555066D9_1_105_c.jpeg', moods: ['happy', 'silly'] },
+            { path: 'cats/2B182830-4F16-4F90-874C-B756EC85A7DC_1_105_c.jpeg', moods: ['unbridled_rage'] },
+            { path: 'cats/7B248BDD-9AEE-4565-9C36-0182C06CC8D9_1_105_c.jpeg', moods: ['weirdo'] },
+            { path: 'cats/296458B9-5521-425D-BDB3-20C5A1DA6E81_1_105_c.jpeg', moods: ['lazy_boy'] },
+            { path: 'cats/2144263C-DC3D-4615-85B7-859282029185_1_105_c.jpeg', moods: ['sweet_perfect_angel_cat'] },
+            { path: 'cats/F8C03863-7F69-4D1B-BEA7-15BE555066D9_1_105_c.jpeg', moods: ['unbridled_rage', 'weirdo'] },
             // Add more photos here with their mood tags
-            // Example: { path: 'cats/cat6.jpg', moods: ['sleepy', 'majestic'] }
+            // Example: { path: 'cats/cat6.jpg', moods: ['lazy_boy', 'sweet_perfect_angel_cat'] }
         ];
 
         // State management
@@ -708,6 +905,10 @@
         let visitCount = 0;
         let currentUser = null;
         let currentFavoriteFilter = 'all';
+        
+        // Upload state
+        let selectedFile = null;
+        let selectedMoods = [];
         
         // Purr functionality state
         let purrProgress = 0;
@@ -726,24 +927,29 @@
             loadFavorites();
         });
         
-        // Username Management
+        // Username Management with Secret Code Protection
         async function checkUsername() {
             const savedUsername = localStorage.getItem('toniUsername');
+            const hasAccess = localStorage.getItem('toniAccess') === 'granted';
             
-            if (savedUsername) {
+            if (savedUsername && hasAccess) {
                 currentUser = savedUsername;
                 updateUserInfo();
                 if (firebaseEnabled) {
                     await loadRatingsFromFirebase();
                 }
             } else {
+                // Clear any partial data if access wasn't granted
+                if (!hasAccess) {
+                    localStorage.removeItem('toniUsername');
+                }
                 showUsernameModal();
             }
         }
         
         function showUsernameModal() {
             document.getElementById('usernameModal').classList.remove('hidden');
-            document.getElementById('usernameInput').focus();
+            document.getElementById('secretCodeInput').focus();
         }
         
         function hideUsernameModal() {
@@ -751,17 +957,36 @@
         }
         
         async function saveUsername() {
-            const input = document.getElementById('usernameInput');
-            const username = input.value.trim();
+            const secretCodeInput = document.getElementById('secretCodeInput');
+            const usernameInput = document.getElementById('usernameInput');
+            const secretCode = secretCodeInput.value.trim();
+            const username = usernameInput.value.trim();
             const errorMsg = document.getElementById('errorMessage');
             
+            // Validate secret code first
+            if (!secretCode) {
+                errorMsg.textContent = 'Please enter the secret code';
+                secretCodeInput.focus();
+                return;
+            }
+            
+            if (secretCode !== 'toni_balogna') {
+                errorMsg.textContent = '❌ Incorrect secret code. Try again!';
+                secretCodeInput.value = '';
+                secretCodeInput.focus();
+                return;
+            }
+            
+            // Validate username
             if (!username) {
                 errorMsg.textContent = 'Please enter a username';
+                usernameInput.focus();
                 return;
             }
             
             if (username.length < 2) {
                 errorMsg.textContent = 'Username must be at least 2 characters';
+                usernameInput.focus();
                 return;
             }
             
@@ -769,11 +994,14 @@
             const sanitized = username.replace(/[^a-zA-Z0-9\s_-]/g, '');
             if (sanitized !== username) {
                 errorMsg.textContent = 'Username can only contain letters, numbers, spaces, - and _';
+                usernameInput.focus();
                 return;
             }
             
+            // Grant access
             currentUser = username;
             localStorage.setItem('toniUsername', username);
+            localStorage.setItem('toniAccess', 'granted');
             
             // Load ratings from Firebase if available
             if (firebaseEnabled) {
@@ -788,6 +1016,9 @@
                 const savedRating = getRating(currentPhoto.path);
                 updateRatingDisplay(savedRating);
             }
+            
+            // Load favorites
+            loadFavorites();
         }
         
         function updateUserInfo() {
@@ -802,16 +1033,30 @@
         function changeUser() {
             if (confirm('Switch users? Your current ratings will be saved.')) {
                 localStorage.removeItem('toniUsername');
+                localStorage.removeItem('toniAccess'); // Clear access
                 currentUser = null;
                 showUsernameModal();
             }
         }
         
-        // Allow Enter key in username input
+        // Allow Enter key in modal inputs
         document.addEventListener('DOMContentLoaded', function() {
-            const input = document.getElementById('usernameInput');
-            if (input) {
-                input.addEventListener('keypress', function(e) {
+            const secretCodeInput = document.getElementById('secretCodeInput');
+            const usernameInput = document.getElementById('usernameInput');
+            
+            if (secretCodeInput) {
+                secretCodeInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        // Move to username field if secret code is entered
+                        if (secretCodeInput.value.trim()) {
+                            usernameInput.focus();
+                        }
+                    }
+                });
+            }
+            
+            if (usernameInput) {
+                usernameInput.addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') {
                         saveUsername();
                     }
@@ -975,8 +1220,7 @@
         
         // Sound control
         function initializeMeowSound() {
-            // Create a simple beep sound using Web Audio API
-            // You can replace this with an actual meow.mp3 file
+            // Create a simple beep sound using Web Audio API for the meow
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             
             window.playMeowSound = function() {
@@ -995,35 +1239,6 @@
                 oscillator.start(audioContext.currentTime);
                 oscillator.stop(audioContext.currentTime + 0.2);
             };
-            
-            // Initialize purr sound generator
-            window.playPurrSound = function() {
-                // Create a low rumbling purr sound
-                const oscillator1 = audioContext.createOscillator();
-                const oscillator2 = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator1.connect(gainNode);
-                oscillator2.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                // Two frequencies for richer purr sound
-                oscillator1.frequency.value = 25; // Low rumble
-                oscillator2.frequency.value = 50; // Harmonic
-                oscillator1.type = 'triangle';
-                oscillator2.type = 'sine';
-                
-                // Volume envelope
-                gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-                gainNode.gain.linearRampToValueAtTime(0.15, audioContext.currentTime + 0.1);
-                gainNode.gain.setValueAtTime(0.15, audioContext.currentTime + 2.9);
-                gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 3);
-                
-                oscillator1.start(audioContext.currentTime);
-                oscillator2.start(audioContext.currentTime);
-                oscillator1.stop(audioContext.currentTime + 3);
-                oscillator2.stop(audioContext.currentTime + 3);
-            };
         }
         
         function playMeow() {
@@ -1038,8 +1253,11 @@
         
         function playPurr() {
             try {
-                if (window.playPurrSound && soundEnabled) {
-                    window.playPurrSound();
+                if (soundEnabled) {
+                    // Use the real purring MP3 file
+                    const purrAudio = new Audio('feedthestraycats-real-cat-purring-sound-354510.mp3');
+                    purrAudio.volume = 0.4; // Adjust volume (0.0 to 1.0)
+                    purrAudio.play().catch(e => console.log('Purr play failed:', e));
                 }
             } catch (e) {
                 console.log('Purr play failed:', e);
@@ -1264,6 +1482,211 @@
             link.click();
             document.body.removeChild(link);
         }
+        
+        // Upload Functionality
+        function initializeUpload() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            
+            // File input change
+            fileInput.addEventListener('change', function(e) {
+                handleFileSelect(e.target.files[0]);
+            });
+            
+            // Drag and drop
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.add('drag-over');
+            });
+            
+            uploadArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.remove('drag-over');
+            });
+            
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadArea.classList.remove('drag-over');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileSelect(files[0]);
+                }
+            });
+        }
+        
+        function handleFileSelect(file) {
+            if (!file) return;
+            
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please select a JPG, JPEG, or PNG image');
+                return;
+            }
+            
+            // Validate file size (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File size must be less than 10MB');
+                return;
+            }
+            
+            selectedFile = file;
+            selectedMoods = [];
+            
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('previewImage').src = e.target.result;
+                document.getElementById('uploadPreview').classList.add('show');
+                
+                // Reset mood tags
+                document.querySelectorAll('.mood-tag').forEach(tag => {
+                    tag.classList.remove('selected');
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function toggleMoodTag(mood) {
+            const tag = document.querySelector(`[data-mood="${mood}"]`);
+            
+            if (selectedMoods.includes(mood)) {
+                selectedMoods = selectedMoods.filter(m => m !== mood);
+                tag.classList.remove('selected');
+            } else {
+                selectedMoods.push(mood);
+                tag.classList.add('selected');
+            }
+        }
+        
+        async function uploadPhoto() {
+            if (!selectedFile) {
+                alert('Please select a file first');
+                return;
+            }
+            
+            if (selectedMoods.length === 0) {
+                alert('Please select at least one mood tag');
+                return;
+            }
+            
+            if (!firebaseEnabled || !storage) {
+                alert('Firebase Storage is not configured. Photos will be saved locally only.');
+                savePhotoLocally();
+                return;
+            }
+            
+            try {
+                // Show progress
+                document.getElementById('uploadProgress').classList.add('show');
+                document.getElementById('uploadPreview').style.opacity = '0.5';
+                
+                // Create unique filename
+                const timestamp = Date.now();
+                const filename = `${timestamp}_${selectedFile.name}`;
+                const storageRef = storage.ref(`cats/${filename}`);
+                
+                // Upload file
+                const uploadTask = storageRef.put(selectedFile);
+                
+                uploadTask.on('state_changed',
+                    // Progress
+                    function(snapshot) {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        document.getElementById('progressFill').style.width = progress + '%';
+                        document.getElementById('progressFill').textContent = Math.round(progress) + '%';
+                    },
+                    // Error
+                    function(error) {
+                        console.error('Upload error:', error);
+                        alert('Upload failed: ' + error.message);
+                        resetUpload();
+                    },
+                    // Complete
+                    async function() {
+                        try {
+                            // Get download URL
+                            const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+                            
+                            // Save photo metadata to Firestore
+                            await db.collection('photos').add({
+                                path: downloadURL,
+                                filename: filename,
+                                moods: selectedMoods,
+                                uploadedBy: currentUser,
+                                uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                            
+                            // Add to local catPhotos array
+                            catPhotos.push({
+                                path: downloadURL,
+                                moods: selectedMoods
+                            });
+                            
+                            alert('✅ Photo uploaded successfully!');
+                            resetUpload();
+                            
+                            // Optionally load the new photo
+                            loadRandomPhoto();
+                            
+                        } catch (error) {
+                            console.error('Error saving metadata:', error);
+                            alert('Photo uploaded but metadata save failed');
+                            resetUpload();
+                        }
+                    }
+                );
+                
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('Upload failed: ' + error.message);
+                resetUpload();
+            }
+        }
+        
+        function savePhotoLocally() {
+            // For local-only mode (no Firebase)
+            // This creates a blob URL - note: it won't persist across page refreshes
+            const blobURL = URL.createObjectURL(selectedFile);
+            
+            catPhotos.push({
+                path: blobURL,
+                moods: selectedMoods
+            });
+            
+            alert('✅ Photo added to this session! (Note: Will be lost on refresh without Firebase)');
+            resetUpload();
+            loadRandomPhoto();
+        }
+        
+        function cancelUpload() {
+            resetUpload();
+        }
+        
+        function resetUpload() {
+            selectedFile = null;
+            selectedMoods = [];
+            document.getElementById('fileInput').value = '';
+            document.getElementById('uploadPreview').classList.remove('show');
+            document.getElementById('uploadPreview').style.opacity = '1';
+            document.getElementById('uploadProgress').classList.remove('show');
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressFill').textContent = '0%';
+            
+            // Reset mood tags
+            document.querySelectorAll('.mood-tag').forEach(tag => {
+                tag.classList.remove('selected');
+            });
+        }
+        
+        // Initialize upload on page load
+        window.addEventListener('load', function() {
+            initializeUpload();
+        });
     </script>
 </body>
 </html>
