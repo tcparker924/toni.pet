@@ -189,6 +189,23 @@
             color: #ddd;
         }
         
+        .clear-rating {
+            font-size: 1.2em;
+            cursor: pointer;
+            color: #999;
+            margin-left: 15px;
+            transition: all 0.3s;
+            user-select: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        
+        .clear-rating:hover {
+            color: #f5576c;
+            background: rgba(245, 87, 108, 0.1);
+            transform: scale(1.1);
+        }
+        
         .button-container {
             margin-top: 20px;
             display: flex;
@@ -767,6 +784,7 @@
             <span class="heart empty" data-rating="3" onclick="ratePhoto(3)">♥</span>
             <span class="heart empty" data-rating="4" onclick="ratePhoto(4)">♥</span>
             <span class="heart empty" data-rating="5" onclick="ratePhoto(5)">♥</span>
+            <span class="clear-rating" onclick="clearRating()" title="Clear rating">✖</span>
         </div>
         
         <div class="button-container">
@@ -891,15 +909,14 @@
         }
 
         // Photo configuration with moods
-        // Format: { path: 'cats/cat1.jpg', moods: ['unbridled_rage', 'weirdo'] }
+        // Photos will be loaded from:
+        // 1. Cloudinary uploads (via localStorage/Firestore)
+        // 2. Any manually added photos below
         const catPhotos = [
-            { path: 'cats/2B182830-4F16-4F90-874C-B756EC85A7DC_1_105_c.jpeg', moods: ['unbridled_rage'] },
-            { path: 'cats/7B248BDD-9AEE-4565-9C36-0182C06CC8D9_1_105_c.jpeg', moods: ['weirdo'] },
-            { path: 'cats/296458B9-5521-425D-BDB3-20C5A1DA6E81_1_105_c.jpeg', moods: ['lazy_boy'] },
-            { path: 'cats/2144263C-DC3D-4615-85B7-859282029185_1_105_c.jpeg', moods: ['sweet_perfect_angel_cat'] },
-            { path: 'cats/F8C03863-7F69-4D1B-BEA7-15BE555066D9_1_105_c.jpeg', moods: ['unbridled_rage', 'weirdo'] },
-            // Add more photos here with their mood tags
-            // Example: { path: 'cats/cat6.jpg', moods: ['lazy_boy', 'sweet_perfect_angel_cat'] }
+            // Add your initial photos here with their mood tags
+            // Example: { path: 'https://res.cloudinary.com/your-cloud/image/upload/v1234567890/toni-gallery/photo.jpg', moods: ['unbridled_rage'] },
+            
+            // These will be populated from uploads automatically
         ];
 
         // State management
@@ -1116,23 +1133,65 @@
             return catPhotos.filter(photo => photo.moods.includes(currentMood));
         }
         
-        // Load random photo
-        function loadRandomPhoto() {
+        // Load random photo with validation
+        async function loadRandomPhoto() {
             const filteredPhotos = getFilteredPhotos();
             
             if (filteredPhotos.length === 0) {
                 document.getElementById('catPhoto').alt = 'No photos available for this mood!';
+                document.getElementById('catPhoto').src = '';
                 currentPhoto = null;
                 updateRatingDisplay(0);
                 return;
             }
             
-            const randomIndex = Math.floor(Math.random() * filteredPhotos.length);
-            currentPhoto = filteredPhotos[randomIndex];
+            // Try to find a valid photo (max 3 attempts)
+            let attempts = 0;
+            let validPhoto = null;
+            
+            while (attempts < 3 && !validPhoto) {
+                const randomIndex = Math.floor(Math.random() * filteredPhotos.length);
+                const photo = filteredPhotos[randomIndex];
+                
+                // Check if image loads
+                const exists = await checkImageExists(photo.path);
+                if (exists) {
+                    validPhoto = photo;
+                } else {
+                    console.log('Skipping broken image:', photo.path);
+                    // Remove from catPhotos array
+                    const index = catPhotos.findIndex(p => p.path === photo.path);
+                    if (index > -1) {
+                        catPhotos.splice(index, 1);
+                    }
+                }
+                attempts++;
+            }
+            
+            if (!validPhoto) {
+                document.getElementById('catPhoto').alt = 'No valid photos available. Please upload some photos!';
+                document.getElementById('catPhoto').src = '';
+                currentPhoto = null;
+                updateRatingDisplay(0);
+                return;
+            }
+            
+            currentPhoto = validPhoto;
             
             const imgElement = document.getElementById('catPhoto');
             imgElement.src = currentPhoto.path;
             imgElement.alt = 'A cute cat photo';
+            
+            // Handle load error
+            imgElement.onerror = function() {
+                console.log('Image failed to load:', currentPhoto.path);
+                // Remove from array and try again
+                const index = catPhotos.findIndex(p => p.path === currentPhoto.path);
+                if (index > -1) {
+                    catPhotos.splice(index, 1);
+                }
+                loadRandomPhoto(); // Try loading another photo
+            };
             
             // Load saved rating
             const savedRating = getRating(currentPhoto.path);
@@ -1165,6 +1224,36 @@
             updateRatingDisplay(rating);
             
             // Reload favorites to show updated rating
+            loadFavorites();
+        }
+        
+        async function clearRating() {
+            if (!currentPhoto || !currentUser) return;
+            
+            // Remove from Firebase if enabled
+            if (firebaseEnabled) {
+                try {
+                    const ratingsRef = db.collection('ratings').doc(currentUser);
+                    const doc = await ratingsRef.get();
+                    
+                    if (doc.exists) {
+                        const ratings = doc.data();
+                        delete ratings[currentPhoto.path];
+                        await ratingsRef.set(ratings);
+                    }
+                } catch (error) {
+                    console.log('Firebase delete failed, using localStorage', error);
+                }
+            }
+            
+            // Remove from localStorage
+            const ratings = JSON.parse(localStorage.getItem(`toniRatings_${currentUser}`) || '{}');
+            delete ratings[currentPhoto.path];
+            localStorage.setItem(`toniRatings_${currentUser}`, JSON.stringify(ratings));
+            
+            updateRatingDisplay(0);
+            
+            // Reload favorites to remove from list
             loadFavorites();
         }
         
@@ -1437,8 +1526,8 @@
             }
         });
         
-        // Favorites Section
-        function loadFavorites() {
+        // Favorites Section with image validation
+        async function loadFavorites() {
             if (!currentUser) return;
             
             const ratings = JSON.parse(localStorage.getItem(`toniRatings_${currentUser}`) || '{}');
@@ -1465,19 +1554,96 @@
                 return;
             }
             
-            favoritesGrid.innerHTML = ratedPhotos.map(photo => {
+            // Validate images before displaying
+            const validatedPhotos = await Promise.all(
+                ratedPhotos.map(async photo => {
+                    const exists = await checkImageExists(photo.path);
+                    return exists ? photo : null;
+                })
+            );
+            
+            // Filter out broken images
+            const validPhotos = validatedPhotos.filter(p => p !== null);
+            
+            // Clean up ratings for broken images
+            const brokenCount = ratedPhotos.length - validPhotos.length;
+            if (brokenCount > 0) {
+                console.log(`Removed ${brokenCount} broken image(s) from favorites`);
+                const cleanedRatings = {};
+                validPhotos.forEach(photo => {
+                    cleanedRatings[photo.path] = photo.rating;
+                });
+                localStorage.setItem(`toniRatings_${currentUser}`, JSON.stringify(cleanedRatings));
+            }
+            
+            if (validPhotos.length === 0) {
+                favoritesGrid.innerHTML = `
+                    <div class="no-favorites">
+                        <div class="no-favorites-icon">💔</div>
+                        <p>No valid photos found. Images may have been deleted.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            favoritesGrid.innerHTML = validPhotos.map(photo => {
                 const hearts = '♥'.repeat(photo.rating);
+                const escapedPath = photo.path.replace(/'/g, "\\'");
                 return `
                     <div class="favorite-item">
-                        <img src="${photo.path}" alt="Favorite cat photo" onclick="viewFavoritePhoto('${photo.path}')">
+                        <img 
+                            src="${photo.path}" 
+                            alt="Favorite cat photo" 
+                            onclick="viewFavoritePhoto('${escapedPath}')"
+                            onerror="handleBrokenImage(this, '${escapedPath}')"
+                        >
                         <div class="favorite-rating">${hearts}</div>
                         <div class="favorite-actions">
-                            <button class="success" onclick="downloadFavorite('${photo.path}')">💾</button>
-                            <button onclick="viewFavoritePhoto('${photo.path}')">👁️ View</button>
+                            <button class="success" onclick="downloadFavorite('${escapedPath}')">💾</button>
+                            <button onclick="viewFavoritePhoto('${escapedPath}')">👁️ View</button>
                         </div>
                     </div>
                 `;
             }).join('');
+        }
+        
+        // Check if image exists and loads successfully
+        function checkImageExists(url) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve(true);
+                img.onerror = () => resolve(false);
+                img.src = url;
+                
+                // Timeout after 5 seconds
+                setTimeout(() => resolve(false), 5000);
+            });
+        }
+        
+        // Handle broken images in favorites
+        function handleBrokenImage(imgElement, path) {
+            // Remove from favorites
+            if (currentUser) {
+                const ratings = JSON.parse(localStorage.getItem(`toniRatings_${currentUser}`) || '{}');
+                delete ratings[path];
+                localStorage.setItem(`toniRatings_${currentUser}`, JSON.stringify(ratings));
+                
+                // Remove from Firebase too
+                if (firebaseEnabled) {
+                    db.collection('ratings').doc(currentUser).update({
+                        [path]: firebase.firestore.FieldValue.delete()
+                    }).catch(err => console.log('Firebase delete failed:', err));
+                }
+            }
+            
+            // Remove the favorite item from display
+            const favoriteItem = imgElement.closest('.favorite-item');
+            if (favoriteItem) {
+                favoriteItem.remove();
+            }
+            
+            // Reload favorites to update count
+            setTimeout(() => loadFavorites(), 500);
         }
         
         function filterFavorites(filter) {
