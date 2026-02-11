@@ -1262,12 +1262,24 @@
             try {
                 if (soundEnabled) {
                     // Use the real purring MP3 file
-                    const purrAudio = new Audio('feedthestraycats-real-cat-purring-sound-354510.mp3');
-                    purrAudio.volume = 0.4; // Adjust volume (0.0 to 1.0)
-                    purrAudio.play().catch(e => console.log('Purr play failed:', e));
+                    window.currentPurrAudio = new Audio('feedthestraycats-real-cat-purring-sound-354510.mp3');
+                    window.currentPurrAudio.volume = 0.2; // Softer volume (was 0.4)
+                    window.currentPurrAudio.play().catch(e => console.log('Purr play failed:', e));
                 }
             } catch (e) {
                 console.log('Purr play failed:', e);
+            }
+        }
+        
+        function stopPurr() {
+            try {
+                if (window.currentPurrAudio) {
+                    window.currentPurrAudio.pause();
+                    window.currentPurrAudio.currentTime = 0;
+                    window.currentPurrAudio = null;
+                }
+            } catch (e) {
+                console.log('Stop purr failed:', e);
             }
         }
         
@@ -1285,11 +1297,14 @@
                 isMouseOver = true;
             });
             
-            // Mouse leave - reset
+            // Mouse leave - reset and stop purr
             photoContainer.addEventListener('mouseleave', function() {
                 isMouseOver = false;
                 purrProgress = 0;
-                isPurring = false;
+                if (isPurring) {
+                    stopPurr(); // Stop purr when mouse leaves
+                    isPurring = false;
+                }
             });
             
             // Track mouse movement (petting)
@@ -1308,8 +1323,12 @@
                         triggerPurr();
                     }
                 } else {
-                    // Reset if movement stops
+                    // Reset if movement stops and stop purr
                     purrProgress = Math.max(0, purrProgress - 0.05);
+                    if (purrProgress === 0 && isPurring) {
+                        stopPurr();
+                        isPurring = false;
+                    }
                 }
                 
                 lastMouseMove = now;
@@ -1326,6 +1345,9 @@
                 
                 if (touchDuration >= 2 && !isPurring) {
                     triggerPurr();
+                } else if (isPurring) {
+                    stopPurr();
+                    isPurring = false;
                 }
             });
         }
@@ -1336,11 +1358,14 @@
             // Play purr sound
             playPurr();
             
-            // Reset after 3 seconds
+            // Auto-stop after 10 seconds (in case user keeps petting)
             setTimeout(() => {
-                isPurring = false;
-                purrProgress = 0;
-            }, 3000);
+                if (isPurring) {
+                    stopPurr();
+                    isPurring = false;
+                    purrProgress = 0;
+                }
+            }, 10000);
         }
         
         // Slideshow control with countdown
@@ -1559,7 +1584,11 @@
         }
         
         function toggleMoodTag(mood) {
-            const tag = document.querySelector(`[data-mood="${mood}"]`);
+            // Get the mood tag in the upload section (not the mood selector buttons)
+            const uploadMoodTags = document.querySelectorAll('#moodTags .mood-tag');
+            const tag = Array.from(uploadMoodTags).find(t => t.getAttribute('data-mood') === mood);
+            
+            if (!tag) return;
             
             if (selectedMoods.includes(mood)) {
                 selectedMoods = selectedMoods.filter(m => m !== mood);
@@ -1568,6 +1597,8 @@
                 selectedMoods.push(mood);
                 tag.classList.add('selected');
             }
+            
+            console.log('Selected moods:', selectedMoods); // Debug log
         }
         
         async function uploadPhoto() {
