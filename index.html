@@ -1141,13 +1141,16 @@
         
         // Initialize on page load
         window.addEventListener('load', async function() {
+            console.log('🚀 Page loaded, initializing...');
             await checkUsername();
-            await loadPhotosFromFirestore(); // Load shared photos from Firestore
+            initializeUpload(); // Initialize upload functionality
+            await loadPhotosFromFirestore(); // Load shared photos from Firestore with real-time sync
             initializeVisitCounter();
-            loadRandomPhoto();
+            // loadRandomPhoto() is called by loadPhotosFromFirestore() after photos are loaded
             initializeMeowSound();
             initializePurrFeature();
             loadFavorites();
+            console.log('✅ Initialization complete!');
         });
         
         // Username Management with Secret Code Protection
@@ -2602,7 +2605,13 @@
                 // Save photo metadata to Firestore (if available)
                 if (firebaseEnabled && db) {
                     try {
-                        await db.collection('photos').add({
+                        console.log('Attempting to save to Firestore:', {
+                            path: photoURL,
+                            moods: selectedMoods,
+                            uploadedBy: currentUser
+                        });
+                        
+                        const docRef = await db.collection('photos').add({
                             path: photoURL,
                             cloudinaryId: data.public_id,
                             fileHash: fileHash,
@@ -2610,9 +2619,18 @@
                             uploadedBy: currentUser,
                             uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
                         });
+                        
+                        console.log('✅ Photo metadata saved to Firestore successfully! Doc ID:', docRef.id);
                     } catch (firestoreError) {
-                        console.log('Firestore save failed, but photo uploaded:', firestoreError);
+                        console.error('❌ Firestore save FAILED:', firestoreError);
+                        console.error('Error code:', firestoreError.code);
+                        console.error('Error message:', firestoreError.message);
+                        alert('⚠️ Photo uploaded to Cloudinary, but failed to sync to Firestore.\n\nError: ' + firestoreError.message + '\n\nThis means other users may not see this photo. Please check Firestore security rules.');
                     }
+                } else {
+                    console.warn('⚠️ Firebase not enabled. Photo saved to localStorage only.');
+                    if (!firebaseEnabled) console.log('Reason: firebaseEnabled =', firebaseEnabled);
+                    if (!db) console.log('Reason: db =', db);
                 }
                 
                 // Add to local catPhotos array
@@ -2675,45 +2693,93 @@
         
         // Load previously uploaded photos from localStorage on startup
         // Load photos from Firestore (shared collection for everyone)
+        let firestoreUnsubscribe = null; // Store unsubscribe function
+        
         async function loadPhotosFromFirestore() {
             if (!db) {
-                console.log('Firestore not available, loading from localStorage only');
+                console.warn('⚠️ Firestore not available, loading from localStorage only');
+                console.log('db =', db, 'firebaseEnabled =', firebaseEnabled);
                 loadUploadedPhotos();
+                loadRandomPhoto();
                 return;
             }
             
             try {
-                console.log('Loading photos from Firestore...');
-                const snapshot = await db.collection('photos').orderBy('uploadedAt', 'desc').get();
+                console.log('📡 Setting up real-time photo sync from Firestore...');
+                console.log('Firebase enabled:', firebaseEnabled);
+                console.log('Database object:', db);
                 
-                catPhotos.length = 0; // Clear existing photos
-                
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    catPhotos.push({
-                        path: data.path,
-                        moods: data.moods || [],
-                        uploadedBy: data.uploadedBy || 'Unknown',
-                        uploadedAt: data.uploadedAt,
-                        hash: data.hash || data.fileHash,
-                        firestoreId: doc.id
+                // Use onSnapshot for real-time updates
+                firestoreUnsubscribe = db.collection('photos')
+                    .orderBy('uploadedAt', 'desc')
+                    .onSnapshot((snapshot) => {
+                        console.log('✅ Firestore snapshot received:', snapshot.size, 'photos');
+                        
+                        if (snapshot.size === 0) {
+                            console.log('ℹ️ No photos in Firestore yet. This is normal for first-time setup.');
+                        }
+                        
+                        catPhotos.length = 0; // Clear existing photos
+                        
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            console.log('📷 Loading photo from Firestore:', {
+                                id: doc.id,
+                                path: data.path,
+                                moods: data.moods,
+                                uploadedBy: data.uploadedBy
+                            });
+                            
+                            catPhotos.push({
+                                path: data.path,
+                                moods: data.moods || [],
+                                uploadedBy: data.uploadedBy || 'Unknown',
+                                uploadedAt: data.uploadedAt,
+                                hash: data.hash || data.fileHash,
+                                firestoreId: doc.id
+                            });
+                        });
+                        
+                        console.log(`✅ Total photos loaded from Firestore: ${catPhotos.length}`);
+                        
+                        // Also load from localStorage as backup
+                        const localPhotoCount = catPhotos.length;
+                        loadUploadedPhotos();
+                        console.log(`📦 Photos from localStorage: ${catPhotos.length - localPhotoCount}`);
+                        
+                        // Refresh the display with new photos
+                        console.log(`🖼️ Total photos available: ${catPhotos.length}`);
+                        loadRandomPhoto();
+                        
+                    }, (error) => {
+                        console.error('❌ Error in Firestore snapshot listener:', error);
+                        console.error('Error code:', error.code);
+                        console.error('Error message:', error.message);
+                        
+                        if (error.code === 'permission-denied') {
+                            console.error('🚫 PERMISSION DENIED: Firestore security rules are blocking access!');
+                            console.error('You need to update Firestore security rules to allow read/write access.');
+                        }
+                        
+                        // Fall back to localStorage if Firestore fails
+                        loadUploadedPhotos();
+                        loadRandomPhoto();
                     });
-                });
                 
-                console.log(`Loaded ${catPhotos.length} photos from Firestore`);
-                
-                // Also load from localStorage as backup
-                loadUploadedPhotos();
+                console.log('✅ Firestore listener set up successfully!');
                 
             } catch (error) {
-                console.error('Error loading photos from Firestore:', error);
+                console.error('❌ Error setting up Firestore listener:', error);
+                console.error('Error details:', error);
                 // Fall back to localStorage if Firestore fails
                 loadUploadedPhotos();
+                loadRandomPhoto();
             }
         }
         
         function loadUploadedPhotos() {
             const savedPhotos = JSON.parse(localStorage.getItem('uploadedPhotos') || '[]');
+            console.log('📦 Loading photos from localStorage backup:', savedPhotos.length, 'photos');
             savedPhotos.forEach(photo => {
                 // Check if photo already exists in catPhotos
                 if (!catPhotos.find(p => p.path === photo.path)) {
@@ -2725,11 +2791,8 @@
             });
         }
         
-        // Initialize upload on page load
-        window.addEventListener('load', function() {
-            initializeUpload();
-            loadUploadedPhotos(); // Load previously uploaded photos
-        });
+        // REMOVED DUPLICATE: Initialize upload on page load is handled by main load event listener
+    
     </script>
 </body>
 </html>

@@ -1,0 +1,93 @@
+// ===================================================
+// FIRESTORE SECURITY RULES FOR TONI GALLERY
+// ===================================================
+// Copy and paste this into Firebase Console → Firestore Database → Rules
+//
+// How to apply:
+// 1. Go to https://console.firebase.google.com/
+// 2. Select project: toni-pet
+// 3. Click "Firestore Database" in left sidebar
+// 4. Click "Rules" tab at top
+// 5. Replace all content with this file
+// 6. Click "Publish"
+//
+// ===================================================
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // =====================================
+    // PHOTOS COLLECTION
+    // =====================================
+    // Stores metadata for all uploaded photos
+    // - path: Cloudinary URL
+    // - cloudinaryId: Cloudinary public ID
+    // - fileHash: For duplicate detection
+    // - moods: Array of mood tags
+    // - uploadedBy: Username of uploader
+    // - uploadedAt: Server timestamp
+    //
+    match /photos/{photoId} {
+      // Anyone can read (view) photos
+      allow read: if true;
+      
+      // Anyone can upload photos
+      allow create: if true;
+      
+      // Anyone can update photo metadata (e.g., change moods)
+      allow update: if true;
+      
+      // Anyone can delete photos
+      // (Optional: You can set this to false to prevent deletion)
+      allow delete: if true;
+    }
+    
+    // =====================================
+    // RATINGS COLLECTION
+    // =====================================
+    // Stores ratings for each photo
+    // - photoUrl: URL of the photo being rated
+    // - ratings: Object with username → rating mappings
+    //
+    match /ratings/{ratingId} {
+      // Anyone can read ratings
+      allow read: if true;
+      
+      // Anyone can create/update ratings
+      allow write: if true;
+    }
+    
+    // =====================================
+    // DEFAULT DENY ALL OTHER COLLECTIONS
+    // =====================================
+    // Block access to any other collections not explicitly defined above
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// ===================================================
+// SECURITY NOTES
+// ===================================================
+//
+// Current Setup: Open access for family gallery
+// - Suitable for: Private family sites, sites with access codes
+// - Risk: Anyone with the URL can upload/view photos
+// - Mitigation: Your site already has a secret code system
+//
+// For Stricter Security (Optional):
+// Replace the photos rules with this to require authentication:
+//
+//   match /photos/{photoId} {
+//     allow read: if true;
+//     allow create: if request.auth != null;
+//     allow update, delete: if request.auth != null 
+//                           && request.auth.uid == resource.data.uploaderId;
+//   }
+//
+// Then add Firebase Authentication to your app.
+//
+// ===================================================
