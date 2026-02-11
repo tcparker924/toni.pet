@@ -1732,21 +1732,68 @@
                 return;
             }
             
-            selectedFile = file;
-            selectedMoods = [];
-            
-            // Show preview
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('previewImage').src = e.target.result;
-                document.getElementById('uploadPreview').classList.add('show');
+            // Check for duplicates
+            checkForDuplicate(file).then(isDuplicate => {
+                if (isDuplicate) {
+                    alert('⚠️ This photo has already been uploaded!\n\nPlease select a different photo.');
+                    return;
+                }
                 
-                // Reset mood tags
-                document.querySelectorAll('.mood-tag').forEach(tag => {
-                    tag.classList.remove('selected');
-                });
-            };
-            reader.readAsDataURL(file);
+                selectedFile = file;
+                selectedMoods = [];
+                
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImage').src = e.target.result;
+                    document.getElementById('uploadPreview').classList.add('show');
+                    
+                    // Reset mood tags
+                    document.querySelectorAll('.mood-tag').forEach(tag => {
+                        tag.classList.remove('selected');
+                    });
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // Check if photo is a duplicate using file hash
+        async function checkForDuplicate(file) {
+            try {
+                // Generate hash of file content
+                const hash = await generateFileHash(file);
+                
+                // Check against stored hashes
+                const uploadedHashes = JSON.parse(localStorage.getItem('uploadedPhotoHashes') || '[]');
+                
+                if (uploadedHashes.includes(hash)) {
+                    console.log('Duplicate detected! Hash:', hash);
+                    return true;
+                }
+                
+                return false;
+            } catch (error) {
+                console.error('Error checking duplicate:', error);
+                return false; // Allow upload if check fails
+            }
+        }
+        
+        // Generate SHA-256 hash of file
+        async function generateFileHash(file) {
+            const buffer = await file.arrayBuffer();
+            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+        
+        // Save photo hash after successful upload
+        function savePhotoHash(hash) {
+            const uploadedHashes = JSON.parse(localStorage.getItem('uploadedPhotoHashes') || '[]');
+            if (!uploadedHashes.includes(hash)) {
+                uploadedHashes.push(hash);
+                localStorage.setItem('uploadedPhotoHashes', JSON.stringify(uploadedHashes));
+            }
         }
         
         function toggleMoodTag(mood) {
@@ -1785,6 +1832,9 @@
             }
             
             try {
+                // Generate hash before upload
+                const fileHash = await generateFileHash(selectedFile);
+                
                 // Show progress
                 document.getElementById('uploadProgress').classList.add('show');
                 document.getElementById('uploadPreview').style.opacity = '0.5';
@@ -1812,12 +1862,16 @@
                 const data = await response.json();
                 const photoURL = data.secure_url;
                 
+                // Save photo hash to prevent future duplicates
+                savePhotoHash(fileHash);
+                
                 // Save photo metadata to Firestore (if available)
                 if (firebaseEnabled && db) {
                     try {
                         await db.collection('photos').add({
                             path: photoURL,
                             cloudinaryId: data.public_id,
+                            fileHash: fileHash,
                             moods: selectedMoods,
                             uploadedBy: currentUser,
                             uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1830,7 +1884,8 @@
                 // Add to local catPhotos array
                 catPhotos.push({
                     path: photoURL,
-                    moods: selectedMoods
+                    moods: selectedMoods,
+                    hash: fileHash
                 });
                 
                 // Save to localStorage as backup
@@ -1838,6 +1893,7 @@
                 savedPhotos.push({
                     path: photoURL,
                     moods: selectedMoods,
+                    hash: fileHash,
                     uploadedBy: currentUser,
                     uploadedAt: new Date().toISOString()
                 });
