@@ -1723,12 +1723,6 @@
             });
             
             await Promise.all(imagePromises);
-            
-            // Add watermark
-            ctx.fillStyle = 'rgba(102, 126, 234, 0.8)';
-            ctx.font = 'bold 24px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('Toni\'s Gallery 🐱', canvasSize / 2, canvasSize - 20);
         }
         
         function getRandomPhotosForCollage(count) {
