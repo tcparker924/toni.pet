@@ -534,6 +534,39 @@
             overflow: hidden;
             background: white;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 3px solid transparent;
+        }
+        
+        .batch-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+        }
+        
+        .batch-item.selected {
+            border-color: #667eea;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            transform: scale(1.02);
+        }
+        
+        .batch-item.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            z-index: 10;
         }
         
         .batch-item img {
@@ -904,6 +937,10 @@
             <img id="catPhoto" alt="A cute cat" />
         </div>
         
+        <div id="uploaderInfo" style="text-align: center; margin: 10px 0; font-size: 0.9em; color: #666; opacity: 0; transition: opacity 0.3s;">
+            📸 Uploaded by <span id="uploaderName" style="font-weight: 600; color: #667eea;"></span>
+        </div>
+        
         <div class="rating-container">
             <span class="rating-label">Rate this photo:</span>
             <span class="heart empty" data-rating="1" onclick="ratePhoto(1)">♥</span>
@@ -967,10 +1004,15 @@
             <div id="batchPreview" class="batch-preview"></div>
             
             <div id="batchTagSection" class="hidden" style="margin: 30px auto; max-width: 600px; padding: 25px; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);">
-                <h3 style="text-align: center; color: #667eea; margin-bottom: 20px;">🏷️ Batch Tag All Photos</h3>
+                <h3 style="text-align: center; color: #667eea; margin-bottom: 20px;">🏷️ Batch Tag Selected Photos</h3>
                 <p style="text-align: center; color: #666; margin-bottom: 15px; font-size: 0.9em;">
-                    Select mood(s) to apply to ALL photos in the batch at once:
+                    <span id="selectedCount" style="font-weight: 600; color: #667eea;">0 photos selected</span><br>
+                    💡 <strong>Click</strong> photos to select • <strong>Ctrl/Cmd+Click</strong> for multiple • <strong>Select All</strong> button below
                 </p>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; justify-content: center;">
+                    <button class="secondary" onclick="selectAllBatchItems()" style="padding: 8px 20px;">✓ Select All</button>
+                    <button class="secondary" onclick="deselectAllBatchItems()" style="padding: 8px 20px;">✕ Deselect All</button>
+                </div>
                 <div class="mood-tags" id="batchAllMoodTags" style="margin-bottom: 20px;">
                     <div class="mood-tag" data-mood="unbridled_rage" onclick="toggleBatchAllMood('unbridled_rage')">😤 Unbridled Rage</div>
                     <div class="mood-tag" data-mood="lazy_boy" onclick="toggleBatchAllMood('lazy_boy')">😴 Lazy Boy</div>
@@ -979,8 +1021,8 @@
                     <div class="mood-tag" data-mood="someone_help" onclick="toggleBatchAllMood('someone_help')">🆘 Someone Help</div>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <button class="success" style="flex: 1;" onclick="applyBatchTagsToAll()">✅ Apply to All Photos</button>
-                    <button class="secondary" style="flex: 1;" onclick="clearAllBatchTags()">🗑️ Clear All Tags</button>
+                    <button class="success" style="flex: 1;" onclick="applyBatchTagsToSelected()">✅ Apply to Selected</button>
+                    <button class="secondary" style="flex: 1;" onclick="clearSelectedTags()">🗑️ Clear Selected Tags</button>
                 </div>
                 <p style="text-align: center; color: #999; margin-top: 15px; font-size: 0.85em;">
                     💡 You can still edit individual photo tags by clicking "🏷️ Tag" on each photo
@@ -1088,6 +1130,7 @@
         let selectedMoods = [];
         let batchFiles = []; // For batch upload
         let batchAllMoods = []; // For batch tagging all photos
+        let selectedBatchItems = []; // For multi-select batch tagging
         
         // Purr functionality state
         let purrProgress = 0;
@@ -1099,6 +1142,7 @@
         // Initialize on page load
         window.addEventListener('load', async function() {
             await checkUsername();
+            await loadPhotosFromFirestore(); // Load shared photos from Firestore
             initializeVisitCounter();
             loadRandomPhoto();
             initializeMeowSound();
@@ -1366,6 +1410,16 @@
             // Load saved rating
             const savedRating = getRating(currentPhoto.path);
             updateRatingDisplay(savedRating);
+            
+            // Display uploader info
+            const uploaderInfo = document.getElementById('uploaderInfo');
+            const uploaderName = document.getElementById('uploaderName');
+            if (currentPhoto.uploadedBy) {
+                uploaderName.textContent = currentPhoto.uploadedBy;
+                uploaderInfo.style.opacity = '1';
+            } else {
+                uploaderInfo.style.opacity = '0';
+            }
             
             // Reload favorites to update current photo highlight
             loadFavorites();
@@ -1904,11 +1958,11 @@
             // Update local array
             photo.moods = newMoods;
             
-            // Update Firestore if connected
-            if (db && currentUser) {
+            // Update Firestore if connected (shared collection)
+            if (db) {
                 try {
-                    // Find the document with this URL
-                    const photosRef = db.collection('users').doc(currentUser).collection('photos');
+                    // Find the document with this path in the shared collection
+                    const photosRef = db.collection('photos');
                     const querySnapshot = await photosRef.where('path', '==', photoUrl).get();
                     
                     if (!querySnapshot.empty) {
@@ -1917,7 +1971,7 @@
                             moods: newMoods,
                             updatedAt: new Date()
                         });
-                        console.log('Tags updated in Firestore');
+                        console.log('Tags updated in Firestore (shared collection)');
                     }
                 } catch (error) {
                     console.error('Error updating Firestore:', error);
@@ -2041,13 +2095,15 @@
             if (batchTagSection) batchTagSection.classList.remove('hidden');
             
             batchPreview.innerHTML = batchFiles.map(item => `
-                <div class="batch-item" data-id="${item.id}">
-                    <button class="remove-batch-item" onclick="removeBatchItem('${item.id}')">✕</button>
+                <div class="batch-item ${selectedBatchItems.includes(item.id) ? 'selected' : ''}" 
+                     data-id="${item.id}" 
+                     onclick="toggleBatchItemSelection('${item.id}', event)">
+                    <button class="remove-batch-item" onclick="removeBatchItem('${item.id}'); event.stopPropagation();">✕</button>
                     <img src="${item.preview}" alt="Preview" />
                     <div class="batch-item-moods" id="moods-${item.id}">
                         ${item.moods.length > 0 ? item.moods.map(m => getMoodEmoji(m)).join(' ') : 'No moods selected'}
                     </div>
-                    <div class="batch-item-actions">
+                    <div class="batch-item-actions" onclick="event.stopPropagation();">
                         <button class="secondary" onclick="selectMoodsForBatchItem('${item.id}')">🏷️ Tag</button>
                     </div>
                 </div>
@@ -2089,7 +2145,61 @@
         
         function removeBatchItem(id) {
             batchFiles = batchFiles.filter(item => item.id !== parseFloat(id));
+            selectedBatchItems = selectedBatchItems.filter(itemId => itemId !== parseFloat(id));
             renderBatchPreview();
+            updateSelectedCount();
+        }
+        
+        function toggleBatchItemSelection(id, event) {
+            const numId = parseFloat(id);
+            const index = selectedBatchItems.indexOf(numId);
+            
+            // Check if Ctrl/Cmd key is pressed
+            const isMultiSelect = event.ctrlKey || event.metaKey;
+            
+            if (isMultiSelect) {
+                // Multi-select mode: toggle this item
+                if (index > -1) {
+                    selectedBatchItems.splice(index, 1);
+                } else {
+                    selectedBatchItems.push(numId);
+                }
+            } else {
+                // Single select mode: select only this item
+                if (index > -1 && selectedBatchItems.length === 1) {
+                    // If this is the only selected item, deselect it
+                    selectedBatchItems = [];
+                } else {
+                    // Select only this item
+                    selectedBatchItems = [numId];
+                }
+            }
+            
+            renderBatchPreview();
+            updateSelectedCount();
+        }
+        
+        function selectAllBatchItems() {
+            selectedBatchItems = batchFiles.map(item => item.id);
+            renderBatchPreview();
+            updateSelectedCount();
+        }
+        
+        function deselectAllBatchItems() {
+            selectedBatchItems = [];
+            renderBatchPreview();
+            updateSelectedCount();
+        }
+        
+        function updateSelectedCount() {
+            const countEl = document.getElementById('selectedCount');
+            if (countEl) {
+                const count = selectedBatchItems.length;
+                countEl.textContent = count === 0 ? 'No photos selected' : 
+                                     count === 1 ? '1 photo selected' : 
+                                     `${count} photos selected`;
+                countEl.style.color = count > 0 ? '#667eea' : '#999';
+            }
         }
         
         function toggleBatchAllMood(mood) {
@@ -2107,25 +2217,27 @@
             console.log('Batch all moods:', batchAllMoods);
         }
         
-        function applyBatchTagsToAll() {
+        function applyBatchTagsToSelected() {
             if (batchAllMoods.length === 0) {
-                alert('Please select at least one mood tag to apply to all photos');
+                alert('Please select at least one mood tag to apply');
                 return;
             }
             
-            if (batchFiles.length === 0) {
-                alert('No photos in batch to tag');
+            if (selectedBatchItems.length === 0) {
+                alert('Please select photos first (click photos to select them)');
                 return;
             }
             
-            // Apply selected moods to all batch files
+            // Apply selected moods to selected batch files only
             batchFiles.forEach(item => {
-                // Add moods that aren't already present
-                batchAllMoods.forEach(mood => {
-                    if (!item.moods.includes(mood)) {
-                        item.moods.push(mood);
-                    }
-                });
+                if (selectedBatchItems.includes(item.id)) {
+                    // Add moods that aren't already present
+                    batchAllMoods.forEach(mood => {
+                        if (!item.moods.includes(mood)) {
+                            item.moods.push(mood);
+                        }
+                    });
+                }
             });
             
             // Clear batch all moods selection
@@ -2134,31 +2246,41 @@
                 tag.classList.remove('selected');
             });
             
+            // Deselect photos after tagging
+            selectedBatchItems = [];
+            
             // Re-render the preview to show updated tags
             renderBatchPreview();
+            updateSelectedCount();
             
-            alert(`✅ Tags applied to all ${batchFiles.length} photos!`);
+            alert(`✅ Tags applied to selected photos!`);
         }
         
-        function clearAllBatchTags() {
-            if (batchFiles.length === 0) {
-                alert('No photos in batch');
+        function clearSelectedTags() {
+            if (selectedBatchItems.length === 0) {
+                alert('Please select photos first (click photos to select them)');
                 return;
             }
             
-            if (!confirm(`Clear all tags from all ${batchFiles.length} photos?`)) {
+            if (!confirm(`Clear all tags from ${selectedBatchItems.length} selected photo(s)?`)) {
                 return;
             }
             
-            // Clear moods from all batch files
+            // Clear moods from selected batch files
             batchFiles.forEach(item => {
-                item.moods = [];
+                if (selectedBatchItems.includes(item.id)) {
+                    item.moods = [];
+                }
             });
+            
+            // Deselect photos after clearing
+            selectedBatchItems = [];
             
             // Re-render the preview
             renderBatchPreview();
+            updateSelectedCount();
             
-            alert('✅ All tags cleared!');
+            alert('✅ Tags cleared from selected photos!');
         }
         
         function selectMoodsForBatchItem(id) {
@@ -2293,16 +2415,17 @@
             const hash = await generateFileHash(file);
             savePhotoHash(hash);
             
-            // Save to Firestore if connected
+            // Save to Firestore (shared collection for everyone to see)
             if (db && currentUser) {
                 try {
-                    await db.collection('users').doc(currentUser).collection('photos').add({
+                    await db.collection('photos').add({
                         path: photoUrl,
                         moods: moods,
+                        uploadedBy: currentUser,
                         uploadedAt: new Date(),
                         hash: hash
                     });
-                    console.log('Saved to Firestore');
+                    console.log('Saved to Firestore (shared collection)');
                 } catch (error) {
                     console.error('Error saving to Firestore:', error);
                 }
@@ -2551,6 +2674,44 @@
         }
         
         // Load previously uploaded photos from localStorage on startup
+        // Load photos from Firestore (shared collection for everyone)
+        async function loadPhotosFromFirestore() {
+            if (!db) {
+                console.log('Firestore not available, loading from localStorage only');
+                loadUploadedPhotos();
+                return;
+            }
+            
+            try {
+                console.log('Loading photos from Firestore...');
+                const snapshot = await db.collection('photos').orderBy('uploadedAt', 'desc').get();
+                
+                catPhotos.length = 0; // Clear existing photos
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    catPhotos.push({
+                        path: data.path,
+                        moods: data.moods || [],
+                        uploadedBy: data.uploadedBy || 'Unknown',
+                        uploadedAt: data.uploadedAt,
+                        hash: data.hash || data.fileHash,
+                        firestoreId: doc.id
+                    });
+                });
+                
+                console.log(`Loaded ${catPhotos.length} photos from Firestore`);
+                
+                // Also load from localStorage as backup
+                loadUploadedPhotos();
+                
+            } catch (error) {
+                console.error('Error loading photos from Firestore:', error);
+                // Fall back to localStorage if Firestore fails
+                loadUploadedPhotos();
+            }
+        }
+        
         function loadUploadedPhotos() {
             const savedPhotos = JSON.parse(localStorage.getItem('uploadedPhotos') || '[]');
             savedPhotos.forEach(photo => {
